@@ -34,8 +34,13 @@ struct eblob_l2hash {
 	pthread_mutex_t		root_lock;
 };
 
+/*
+ * One hash entry
+ */
 struct eblob_l2hash_entry {
 	struct rb_node		node;
+	/* List of key hash collisions */
+	struct list_head	collisions;
 	eblob_l2hash_t		key;
 
 	unsigned int		dsize;
