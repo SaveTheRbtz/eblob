@@ -84,4 +84,12 @@ struct eblob_hash_entry {
 	unsigned char		data[0];
 };
 
+struct eblob_l2hash_entry {
+	struct rb_node		node;
+	eblob_l2hash_t		key;
+
+	unsigned int		dsize;
+	unsigned char		data[0];
+};
+
 #endif /* __EBLOB_HASH_H */
