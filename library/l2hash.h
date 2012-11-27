@@ -50,6 +50,11 @@ struct eblob_l2hash_entry {
 	unsigned char		data[0];
 };
 
+/* Constructor and destructor */
+struct eblob_l2hash *eblob_l2hash_init(void);
+void eblob_l2hash_destroy(struct eblob_l2hash *h);
+
+/* Public API */
 int eblob_l2hash_insert(struct eblob_l2hash *h, struct eblob_key *key, void *data, int dsize);
 int eblob_l2hash_lookup(struct eblob_l2hash *h, struct eblob_key *key, void **datap, int **dsizep);
 int eblob_l2hash_remove(struct eblob_l2hash *h, struct eblob_key *key);
