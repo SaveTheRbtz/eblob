@@ -49,7 +49,7 @@
  * 32bit murmur implementation aka MurmurHash2
  * TODO: Make consistient with 64-bit version
  */
-static eblob_l2hash_t eblob_l2hash(const void *key, int len, eblob_l2hash_t seed)
+static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t seed)
 {
 	const uint32_t m = 0x5bd1e995;
 	const int r = 24;
@@ -90,7 +90,7 @@ static eblob_l2hash_t eblob_l2hash(const void *key, int len, eblob_l2hash_t seed
 /*
  * 64bit murmur implementation aka MurmurHash64A
  */
-static eblob_l2hash_t eblob_l2hash(const void *key, int len, eblob_l2hash_t seed)
+static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t seed)
 {
 	const uint64_t m = 0xc6a4a7935bd1e995LLU;
 	const int r = 47;
@@ -139,7 +139,7 @@ static eblob_l2hash_t eblob_l2hash(const void *key, int len, eblob_l2hash_t seed
 static inline eblob_l2hash_t eblob_l2hash_key(struct eblob_key *key)
 {
 	assert(key != NULL);
-	return eblob_l2hash(key, EBLOB_ID_SIZE, 0);
+	return eblob_l2hash_data(key, EBLOB_ID_SIZE, 0);
 }
 
 static void eblob_hash_entry_free(struct eblob_hash *h __unused, struct eblob_hash_entry *e)
