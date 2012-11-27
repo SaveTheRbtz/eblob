@@ -423,7 +423,7 @@ int eblob_hash_lookup_alloc(struct eblob_hash *h, struct eblob_key *key, void **
  *
  * TODO: move ram control logging to separate function i.e eblob_dump_rc()
  */
-int eblob_dump_hash(void *priv, struct eblob_hash_entry *entry)
+int __unused eblob_dump_hash(void *priv, struct eblob_hash_entry *entry)
 {
 	struct eblob_log *log;
 	struct eblob_ram_control *rctl;
