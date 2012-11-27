@@ -37,6 +37,14 @@ struct eblob_hash {
 	uint64_t		max_queue_size;
 };
 
+/*
+ * Tree that used for last base when EBLOB_L2HASH flag is set
+ */
+struct eblob_l2hash {
+	struct rb_root		root;
+	pthread_mutex_t		root_lock;
+};
+
 struct eblob_hash *eblob_hash_init(uint64_t cache_szie, int *errp);
 void eblob_hash_exit(struct eblob_hash *h);
 int eblob_hash_remove_nolock(struct eblob_hash *h, struct eblob_key *key);
