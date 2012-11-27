@@ -13,6 +13,7 @@
  * GNU General Public License for more details.
  */
 
+#include "list.h"
 #include "rbtree.h"
 
 #ifndef __EBLOB_L2HASH_H
@@ -41,9 +42,12 @@ struct eblob_l2hash_entry {
 	struct rb_node		node;
 	/* List of key hash collisions */
 	struct list_head	collisions;
+	/* Second hash of eblob_key */
 	eblob_l2hash_t		key;
 
+	/* Size of data an data itself inside hash entry */
 	unsigned int		dsize;
 	unsigned char		data[0];
 };
+
 #endif /* __EBLOB_L2HASH_H */
