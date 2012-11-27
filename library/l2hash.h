@@ -50,4 +50,10 @@ struct eblob_l2hash_entry {
 	unsigned char		data[0];
 };
 
+int eblob_l2hash_insert(struct eblob_l2hash *h, struct eblob_key *key, void *data, int dsize);
+int eblob_l2hash_lookup(struct eblob_l2hash *h, struct eblob_key *key, void **datap, int **dsizep);
+int eblob_l2hash_remove(struct eblob_l2hash *h, struct eblob_key *key);
+int eblob_l2hash_update(struct eblob_l2hash *h, struct eblob_key *key, void **datap, int **dsizep);
+int eblob_l2hash_upsert(struct eblob_l2hash *h, struct eblob_key *key, void **datap, int **dsizep);
+
 #endif /* __EBLOB_L2HASH_H */
