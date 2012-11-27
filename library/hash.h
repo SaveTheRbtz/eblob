@@ -59,8 +59,10 @@ void eblob_hash_iterator(struct rb_root *n, void *callback_priv,
 
 #ifdef HASH32
 typedef uint32_t	eblob_l2hash_t;
+#define PRIl2h		PRIu32
 #else
 typedef uint64_t	eblob_l2hash_t;
+#define PRIl2h		PRIu64
 #endif
 
 struct eblob_hash_entry {
