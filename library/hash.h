@@ -57,6 +57,12 @@ void eblob_hash_iterator(struct rb_root *n, void *callback_priv,
  */
 #define EBLOB_HASH_FLAGS_TOP_QUEUE      (1<<1)
 
+#ifdef HASH32
+typedef uint32_t	eblob_l2hash_t;
+#else
+typedef uint64_t	eblob_l2hash_t;
+#endif
+
 struct eblob_hash_entry {
 	struct rb_node		node;
 	struct list_head	cache_entry;

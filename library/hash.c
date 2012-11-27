@@ -44,17 +44,58 @@
 #include "hash.h"
 #include "blob.h"
 
+#ifdef HASH32
 /*
- * 64bit murmur implementation
- * Known as MurmurHash64A
- * TODO: Can be replaced with 32-bit version
+ * 32bit murmur implementation aka MurmurHash2
+ * TODO: Make consistient with 64-bit version
  */
-static uint64_t eblob_l2hash(const void *key, int len, uint64_t seed)
+static eblob_l2hash_t eblob_l2hash(const void *key, int len, eblob_l2hash_t seed)
+{
+	const uint32_t m = 0x5bd1e995;
+	const int r = 24;
+
+	eblob_l2hash_t h = seed ^ len; /* !! */
+
+	const unsigned char *data = (const unsigned char *)key;
+
+	while(len >= 4)
+	{
+		uint32_t k = *(uint32_t*)data;
+
+		k *= m;
+		k ^= k >> r;
+		k *= m;
+
+		h *= m;
+		h ^= k;
+
+		data += 4;
+		len -= 4;
+	}
+
+	switch(len) {
+	case 3: h ^= data[2] << 16;
+	case 2: h ^= data[1] << 8;
+	case 1: h ^= data[0];
+		h *= m;
+	};
+
+	h ^= h >> 13;
+	h *= m;
+	h ^= h >> 15;
+
+	return h;
+}
+#else
+/*
+ * 64bit murmur implementation aka MurmurHash64A
+ */
+static eblob_l2hash_t eblob_l2hash(const void *key, int len, eblob_l2hash_t seed)
 {
 	const uint64_t m = 0xc6a4a7935bd1e995LLU;
 	const int r = 47;
 
-	uint64_t h = seed ^ (len * m);
+	eblob_l2hash_t h = seed ^ (len * m);
 
 	const uint64_t *data = (const uint64_t *)key;
 	const uint64_t *end = data + (len/8);
@@ -90,12 +131,14 @@ static uint64_t eblob_l2hash(const void *key, int len, uint64_t seed)
 
 	return h;
 }
+#endif
 
 /*
  * Second level hash for eblob key
  */
-static inline uint64_t eblob_l2hash_key(struct eblob_key *key)
+static inline eblob_l2hash_t eblob_l2hash_key(struct eblob_key *key)
 {
+	assert(key != NULL);
 	return eblob_l2hash(key, EBLOB_ID_SIZE, 0);
 }
 
