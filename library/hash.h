@@ -37,14 +37,6 @@ struct eblob_hash {
 	uint64_t		max_queue_size;
 };
 
-/*
- * Tree that used for last base when EBLOB_L2HASH flag is set
- */
-struct eblob_l2hash {
-	struct rb_root		root;
-	pthread_mutex_t		root_lock;
-};
-
 struct eblob_hash *eblob_hash_init(uint64_t cache_szie, int *errp);
 void eblob_hash_exit(struct eblob_hash *h);
 int eblob_hash_remove_nolock(struct eblob_hash *h, struct eblob_key *key);
@@ -65,14 +57,6 @@ void eblob_hash_iterator(struct rb_root *n, void *callback_priv,
  */
 #define EBLOB_HASH_FLAGS_TOP_QUEUE      (1<<1)
 
-#ifdef HASH32
-typedef uint32_t	eblob_l2hash_t;
-#define PRIl2h		PRIu32
-#else
-typedef uint64_t	eblob_l2hash_t;
-#define PRIl2h		PRIu64
-#endif
-
 struct eblob_hash_entry {
 	struct rb_node		node;
 	struct list_head	cache_entry;
@@ -81,14 +65,6 @@ struct eblob_hash_entry {
 	unsigned int		flags;
 
 	struct eblob_key	key;
-	unsigned char		data[0];
-};
-
-struct eblob_l2hash_entry {
-	struct rb_node		node;
-	eblob_l2hash_t		key;
-
-	unsigned int		dsize;
 	unsigned char		data[0];
 };
 
