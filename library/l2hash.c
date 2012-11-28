@@ -28,7 +28,7 @@
 #ifdef HASH32
 /**
  * eblob_l2hash_data() - 32bit murmur implementation aka MurmurHash2
- * TODO: Make consistient with 64-bit version
+ * TODO: Make consistent with 64-bit version
  */
 static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t seed)
 {
@@ -142,7 +142,7 @@ struct eblob_l2hash *eblob_l2hash_init(void)
 }
 
 /**
- * eblob_l2hash_destroy() - frees memory allocatd by eblob_l2hash_init()
+ * eblob_l2hash_destroy() - frees memory allocated by eblob_l2hash_init()
  */
 int eblob_l2hash_destroy(struct eblob_l2hash *l2h)
 {
@@ -178,7 +178,7 @@ static int eblob_l2hash_check_key(struct eblob_key *key, struct eblob_ram_contro
  * Returns:
  *	0:		Collision resolved into @rctl
  *	-ENOENT:	Entry not found
- *	Other:		Error happended
+ *	Other:		Error happened
  */
 static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 		struct eblob_key *key, struct eblob_ram_control *rctl)
@@ -194,7 +194,7 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 		err = eblob_l2hash_check_key(key, &collision->rctl);
 		switch (err) {
 		case 0:
-			/* This rctl belongs to @key */
+			/* This @rctl belongs to @key */
 			memcpy(rctl, &collision->rctl, sizeof(struct eblob_ram_control));
 			return 0;
 		case 1:
