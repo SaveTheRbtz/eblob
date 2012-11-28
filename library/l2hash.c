@@ -417,3 +417,94 @@ int eblob_l2hash_remove(struct eblob_l2hash *l2h, struct eblob_key *key)
 
 	return err;
 }
+
+/**
+ * __eblob_l2hash_insert() - inserts @rctl entry into l2hash.
+ * @flags:	changes behaviour in cases when entry already exists.
+ *
+ * We start by walking a tree of second level hashes creating entry if needed,
+ * then we walk list of collisions resolving them and finally we update /
+ * insert / upsert ram control.
+ *
+ * Returns:
+ *	0:	Success
+ *	Other:	Error
+ */
+static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key,
+		struct eblob_ram_control *rctl, unsigned int flags)
+{
+	struct eblob_l2hash_collision *collision;
+	struct eblob_l2hash_entry *e;
+	struct rb_node *n, *parent, **node;
+	int err = 0, created_list_node = 0, created_tree_node = 0;
+
+	assert(l2h != NULL);
+	assert(key != NULL);
+	assert(rctl != NULL);
+	assert(flags != 0);
+	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
+
+	if (flags == EBLOB_L2HASH_ADD_NONE)
+		return -EINVAL;
+	if ((flags & ~EBLOB_L2HASH_ADD_ALL) != 0)
+		return -EINVAL;
+
+	/* Search tree for matching entry */
+	n = __eblob_l2hash_walk(l2h, key, &parent, &node);
+	if (n == NULL) {
+		if (flags & EBLOB_L2HASH_ADD_UPDATE)
+			return -ENOENT;
+
+		assert(node != NULL);
+		assert(parent != NULL);
+
+		/* Create tree entry */
+		e = calloc(1, sizeof(struct eblob_l2hash_entry));
+		if (e == NULL)
+			return -ENOMEM;
+		rb_link_node(&e->node, parent, node);
+		rb_insert_color(*node, &l2h->root);
+		INIT_LIST_HEAD(&e->collisions);
+		created_tree_node = 1;
+	}
+
+	/* Search linked list for matching entry */
+	collision = __eblob_l2hash_resolve_collisions(e, key);
+	if (collision == L2HASH_RESOLVE_FAILED) {
+		err = -EIO;
+		goto err;
+	} else if (collision == NULL) {
+		if (flags & EBLOB_L2HASH_ADD_UPDATE) {
+			err = -ENOENT;
+			goto err;
+		}
+		/* Create list entry */
+		collision = calloc(1, sizeof(struct eblob_l2hash_collision));
+		if (collision == NULL) {
+			err = -ENOMEM;
+			goto err;
+		}
+		list_add(&collision->list, &e->collisions);
+		created_list_node = 1;
+	} else {
+		/* Entry was found */
+		if (flags & EBLOB_L2HASH_ADD_INSERT) {
+			err = -EEXIST;
+			goto err;
+		}
+	}
+
+	/* Finally insert/update/upsert ram control */
+	collision->rctl = *rctl;
+
+err:
+	if (created_list_node != 0) {
+		rb_erase(&e->node, &l2h->root);
+		free(e);
+	}
+	if (created_tree_node != 0) {
+		rb_erase(&e->node, &l2h->root);
+		free(e);
+	}
+	return err;
+}
