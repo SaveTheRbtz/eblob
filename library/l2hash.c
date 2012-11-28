@@ -24,8 +24,8 @@
 #include "rbtree.h"
 
 #ifdef HASH32
-/*
- * 32bit murmur implementation aka MurmurHash2
+/**
+ * eblob_l2hash_data() - 32bit murmur implementation aka MurmurHash2
  * TODO: Make consistient with 64-bit version
  */
 static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t seed)
@@ -66,8 +66,8 @@ static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t
 	return h;
 }
 #else
-/*
- * 64bit murmur implementation aka MurmurHash64A
+/**
+ * eblob_l2hash_data() - 64bit murmur implementation aka MurmurHash64A
  */
 static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t seed)
 {
@@ -112,8 +112,8 @@ static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t
 }
 #endif
 
-/*
- * Second level hash for eblob key
+/**
+ * eblob_l2hash_key() - second hash for eblob key
  */
 static inline eblob_l2hash_t eblob_l2hash_key(struct eblob_key *key)
 {
