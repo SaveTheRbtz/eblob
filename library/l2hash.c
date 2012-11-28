@@ -466,7 +466,7 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 		if (e == NULL)
 			return -ENOMEM;
 		rb_link_node(&e->node, parent, node);
-		rb_insert_color(*node, &l2h->root);
+		rb_insert_color(&e->node, &l2h->root);
 		INIT_LIST_HEAD(&e->collisions);
 		created_tree_node = 1;
 	}
