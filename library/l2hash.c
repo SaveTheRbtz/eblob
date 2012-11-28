@@ -135,13 +135,18 @@ struct eblob_l2hash *eblob_l2hash_init(void)
 
 	l2h = calloc(1, sizeof(struct eblob_l2hash));
 	if (l2h == NULL)
-		return NULL;
+		goto err;
 
 	l2h->root = RB_ROOT;
 	if (pthread_mutex_init(&l2h->root_lock, NULL) != 0)
-		return NULL;
+		goto err_free;
 
 	return l2h;
+
+err_free:
+	free(l2h);
+err:
+	return NULL;
 }
 
 /**
