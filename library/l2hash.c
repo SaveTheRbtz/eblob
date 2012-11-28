@@ -291,9 +291,10 @@ __eblob_l2hash_walk(struct eblob_l2hash *l2h, struct eblob_key *key,
 
 /**
  * __eblob_l2hash_lookup_nolock() - internal function that walks @l2h->root
- * tree and returns data found by eblob_l2hash_key() of @key.
+ * tree using eblob_l2hash_key(@key) as key.
  *
- * Returns pointer to tree entry on success or NULL if entry is not found
+ * Returns pointer to tree entry on success or NULL if node with matching @key
+ * was not found.
  */
 static struct eblob_l2hash_entry *
 __eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h, struct eblob_key *key)
