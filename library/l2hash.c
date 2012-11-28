@@ -424,11 +424,11 @@ int eblob_l2hash_remove(struct eblob_l2hash *l2h, struct eblob_key *key)
 
 /**
  * __eblob_l2hash_insert() - inserts @rctl entry into l2hash.
- * @type:	changes behaviour in cases when entry already exists.
+ * @type:	changes behaviour depending on existance of @key in cache.
  *
  * We start by walking a tree of second level hashes creating entry if needed,
  * then we walk list of collisions resolving them and finally we update /
- * insert / upsert ram control.
+ * insert / upsert ram control into cache.
  *
  * Returns:
  *	0:	Success
