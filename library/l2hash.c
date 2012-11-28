@@ -14,6 +14,7 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -145,6 +146,9 @@ struct eblob_l2hash *eblob_l2hash_init(void)
 int eblob_l2hash_destroy(struct eblob_l2hash *l2h)
 {
 	int err;
+
+	if (l2h == NULL)
+		return -EINVAL;
 
 	if ((err = pthread_mutex_destroy(&l2h->root_lock)) != 0)
 		return -err;
