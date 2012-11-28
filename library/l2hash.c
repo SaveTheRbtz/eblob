@@ -166,7 +166,7 @@ int eblob_l2hash_destroy(struct eblob_l2hash *l2h)
 /**
  * eblob_l2hash_compare_index() - goes to disk and compares @key with data in disk
  * control.
- * Index has higher probability to be in memory so check with it.
+ * Index has higher probability to be in memory so use if insted of data file.
  *
  * Returns:
  *	0:	@key belongs to @rctl
@@ -184,13 +184,11 @@ static int eblob_l2hash_compare_index(struct eblob_key *key, struct eblob_ram_co
 
 	/* Read index data */
 	err = pread(rctl->index_fd, &dc, sizeof(struct eblob_disk_control), rctl->index_offset);
-	if (err != sizeof(struct eblob_disk_control)) {
-		err = (err == -1) ? -errno : -EINTR; /* TODO: handle signal case gracefully */
-		return err;
-	}
+	if (err != sizeof(struct eblob_disk_control))
+		return (err == -1) ? -errno : -EINTR; /* TODO: handle signal case gracefully */
 
 	/* Compare given @key with index */
-	if (eblob_id_cmp(dc.key.id, key->id) == 0)
+	if (memcmp(dc.key.id, key->id, EBLOB_ID_SIZE) == 0)
 		return 0;
 	return 1;
 }
