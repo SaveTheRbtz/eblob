@@ -250,6 +250,7 @@ static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 	assert(l2h != NULL);
 	assert(key != NULL);
 	assert(rctl != NULL);
+	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
 
 	n = l2h->root.rb_node;
 	while (n) {
