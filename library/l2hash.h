@@ -43,7 +43,7 @@ struct eblob_l2hash_entry {
 	/* List of key hash collisions */
 	struct list_head	collisions;
 	/* Second hash of eblob_key */
-	eblob_l2hash_t		key;
+	eblob_l2hash_t		l2key;
 };
 
 /* One entry in collision list of eblob_l2hash_entry */
