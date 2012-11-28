@@ -195,7 +195,9 @@ static int eblob_l2hash_compare_index(struct eblob_key *key, struct eblob_ram_co
 
 /**
  * __eblob_l2hash_collision() - walks list of collisions and returns entry
- * which on-disk index key matches @key
+ * which on-disk index key matches @key or NULL if no entry matched.
+ *
+ * Returns L2HASH_RESOLVE_FAILED in case eblob_l2hash_compare_index() failed
  */
 static struct eblob_l2hash_collision *
 __eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e, struct eblob_key *key)
