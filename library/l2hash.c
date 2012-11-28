@@ -138,3 +138,17 @@ struct eblob_l2hash *eblob_l2hash_init(void)
 
 	return l2h;
 }
+
+/**
+ * eblob_l2hash_destroy() - frees memory allocatd by eblob_l2hash_init()
+ */
+int eblob_l2hash_destroy(struct eblob_l2hash *l2h)
+{
+	int err;
+
+	if ((err = pthread_mutex_destroy(&l2h->root_lock)) != 0)
+		return -err;
+	free(l2h);
+
+	return 0;
+}
