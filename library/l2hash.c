@@ -333,6 +333,7 @@ static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 
 	if ((e = __eblob_l2hash_lookup_nolock(l2h, key)) != NULL)
 		return eblob_l2hash_resolve_collisions(e, key, rctl);
+
 	return -ENOENT;
 }
 
