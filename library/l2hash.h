@@ -56,7 +56,10 @@ struct eblob_l2hash_entry {
 
 /* One entry in collision list of eblob_l2hash_entry */
 struct eblob_l2hash_collision {
-	/* Linked list of collisions */
+	/*
+	 * Linked list of collisions
+	 * TODO: replace list with hlist
+	 */
 	struct list_head		list;
 	/* Data itself */
 	struct eblob_ram_control	rctl;
