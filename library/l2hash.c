@@ -420,7 +420,7 @@ int eblob_l2hash_remove(struct eblob_l2hash *l2h, struct eblob_key *key)
 
 /**
  * __eblob_l2hash_insert() - inserts @rctl entry into l2hash.
- * @flags:	changes behaviour in cases when entry already exists.
+ * @type:	changes behaviour in cases when entry already exists.
  *
  * We start by walking a tree of second level hashes creating entry if needed,
  * then we walk list of collisions resolving them and finally we update /
@@ -431,7 +431,7 @@ int eblob_l2hash_remove(struct eblob_l2hash *l2h, struct eblob_key *key)
  *	Other:	Error
  */
 static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key,
-		struct eblob_ram_control *rctl, unsigned int flags)
+		struct eblob_ram_control *rctl, unsigned int type)
 {
 	struct eblob_l2hash_collision *collision;
 	struct eblob_l2hash_entry *e;
@@ -441,18 +441,17 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 	assert(l2h != NULL);
 	assert(key != NULL);
 	assert(rctl != NULL);
-	assert(flags != 0);
 	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
 
-	if (flags == EBLOB_L2HASH_ADD_NONE)
+	if (type <= EBLOB_L2HASH_TYPE_FIRST)
 		return -EINVAL;
-	if ((flags & ~EBLOB_L2HASH_ADD_ALL) != 0)
+	if (type >= EBLOB_L2HASH_TYPE_LAST)
 		return -EINVAL;
 
 	/* Search tree for matching entry */
 	n = __eblob_l2hash_walk(l2h, key, &parent, &node);
 	if (n == NULL) {
-		if (flags & EBLOB_L2HASH_ADD_UPDATE)
+		if (type == EBLOB_L2HASH_TYPE_UPDATE)
 			return -ENOENT;
 
 		assert(node != NULL);
@@ -474,7 +473,7 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 		err = -EIO;
 		goto err;
 	} else if (collision == NULL) {
-		if (flags & EBLOB_L2HASH_ADD_UPDATE) {
+		if (type == EBLOB_L2HASH_TYPE_UPDATE) {
 			err = -ENOENT;
 			goto err;
 		}
@@ -488,7 +487,7 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 		created_list_node = 1;
 	} else {
 		/* Entry was found */
-		if (flags & EBLOB_L2HASH_ADD_INSERT) {
+		if (type == EBLOB_L2HASH_TYPE_INSERT) {
 			err = -EEXIST;
 			goto err;
 		}
@@ -513,7 +512,7 @@ err:
  * _eblob_l2hash_insert() - lock&check wrapper for __eblob_l2hash_insert()
  */
 static int _eblob_l2hash_insert(struct eblob_l2hash *l2h,
-		struct eblob_key *key, struct eblob_ram_control *rctl, unsigned int flags)
+		struct eblob_key *key, struct eblob_ram_control *rctl, unsigned int type)
 {
 	int err;
 
@@ -523,7 +522,7 @@ static int _eblob_l2hash_insert(struct eblob_l2hash *l2h,
 	if ((err = pthread_mutex_lock(&l2h->root_lock)) != 0)
 		return -err;
 
-	err = __eblob_l2hash_insert(l2h, key, rctl, flags);
+	err = __eblob_l2hash_insert(l2h, key, rctl, type);
 
 	if (pthread_mutex_lock(&l2h->root_lock) != 0)
 		abort();
@@ -537,7 +536,7 @@ static int _eblob_l2hash_insert(struct eblob_l2hash *l2h,
  */
 int eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key, struct eblob_ram_control *rctl)
 {
-	return _eblob_l2hash_insert(l2h, key, rctl, EBLOB_L2HASH_ADD_INSERT);
+	return _eblob_l2hash_insert(l2h, key, rctl, EBLOB_L2HASH_TYPE_INSERT);
 }
 
 /**
@@ -545,7 +544,7 @@ int eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key, struct 
  */
 int eblob_l2hash_update(struct eblob_l2hash *l2h, struct eblob_key *key, struct eblob_ram_control *rctl)
 {
-	return _eblob_l2hash_insert(l2h, key, rctl, EBLOB_L2HASH_ADD_UPDATE);
+	return _eblob_l2hash_insert(l2h, key, rctl, EBLOB_L2HASH_TYPE_UPDATE);
 }
 
 /**
@@ -553,5 +552,5 @@ int eblob_l2hash_update(struct eblob_l2hash *l2h, struct eblob_key *key, struct 
  */
 int eblob_l2hash_upsert(struct eblob_l2hash *l2h, struct eblob_key *key, struct eblob_ram_control *rctl)
 {
-	return _eblob_l2hash_insert(l2h, key, rctl, EBLOB_L2HASH_ADD_UPSERT);
+	return _eblob_l2hash_insert(l2h, key, rctl, EBLOB_L2HASH_TYPE_UPSERT);
 }

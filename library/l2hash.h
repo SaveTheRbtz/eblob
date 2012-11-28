@@ -27,16 +27,19 @@ typedef uint64_t	eblob_l2hash_t;
 #define PRIl2h		PRIu64
 #endif
 
-/* Flags for internal __eblob_l2hash_insert() */
-#define EBLOB_L2HASH_ADD_NONE		(0)
-/* Insert entry, fails if entry already exist */
-#define EBLOB_L2HASH_ADD_INSERT		(1<<0)
-/* Updates entry, fails if entry does not exist */
-#define EBLOB_L2HASH_ADD_UPDATE		(1<<1)
-/* Inserts or updates entry depending if it exists or not */
-#define EBLOB_L2HASH_ADD_UPSERT		(1<<2)
-#define EBLOB_L2HASH_ADD_ALL		(EBLOB_L2HASH_ADD_INSERT \
-		| EBLOB_L2HASH_ADD_UPDATE | EBLOB_L2HASH_ADD_UPSERT)
+/* Types for internal __eblob_l2hash_insert() */
+enum eblob_l2hash_insert_types {
+	/* Sentinel */
+	EBLOB_L2HASH_TYPE_FIRST,
+	/* Updates entry, fails if entry does not exist */
+	EBLOB_L2HASH_TYPE_UPDATE,
+	/* Inserts or updates entry depending if it exists or not */
+	EBLOB_L2HASH_TYPE_UPSERT,
+	/* Insert entry, fails if entry already exist */
+	EBLOB_L2HASH_TYPE_INSERT,
+	/* Sentinel */
+	EBLOB_L2HASH_TYPE_LAST,
+};
 
 /* Resolving collision failed */
 #define L2HASH_RESOLVE_FAILED		(void *)-1
