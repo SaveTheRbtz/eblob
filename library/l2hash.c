@@ -353,7 +353,7 @@ int eblob_l2hash_lookup(struct eblob_l2hash *l2h, struct eblob_key *key,
 
 	err = eblob_l2hash_lookup_nolock(l2h, key, rctl);
 
-	if (pthread_mutex_lock(&l2h->root_lock) != 0)
+	if (pthread_mutex_unlock(&l2h->root_lock) != 0)
 		abort();
 
 	return err;
@@ -416,7 +416,7 @@ int eblob_l2hash_remove(struct eblob_l2hash *l2h, struct eblob_key *key)
 
 	err = eblob_l2hash_remove_nolock(l2h, key);
 
-	if (pthread_mutex_lock(&l2h->root_lock) != 0)
+	if (pthread_mutex_unlock(&l2h->root_lock) != 0)
 		abort();
 
 	return err;
@@ -528,7 +528,7 @@ static int _eblob_l2hash_insert(struct eblob_l2hash *l2h,
 
 	err = __eblob_l2hash_insert(l2h, key, rctl, type);
 
-	if (pthread_mutex_lock(&l2h->root_lock) != 0)
+	if (pthread_mutex_unlock(&l2h->root_lock) != 0)
 		abort();
 
 	return err;
