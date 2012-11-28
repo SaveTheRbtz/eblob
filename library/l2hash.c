@@ -233,6 +233,8 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 /**
  * __eblob_l2hash_lookup_nolock() - internal function that wlaks tree and
  * returns found entry.
+ *
+ * Returns pointer to tree entry on success or NULL if entry is not found
  */
 static struct eblob_l2hash_entry *
 __eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h, struct eblob_key *key)
