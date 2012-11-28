@@ -36,7 +36,7 @@ struct eblob_l2hash {
 };
 
 /*
- * One hash entry
+ * List of hash entries which happen to map to the same l2hash
  */
 struct eblob_l2hash_entry {
 	struct rb_node		node;
@@ -44,10 +44,14 @@ struct eblob_l2hash_entry {
 	struct list_head	collisions;
 	/* Second hash of eblob_key */
 	eblob_l2hash_t		key;
+};
 
-	/* Size of data an data itself inside hash entry */
-	unsigned int		dsize;
-	unsigned char		data[0];
+/* One entry in collision list of eblob_l2hash_entry */
+struct eblob_l2hash_collision {
+	/* Linked list of collisions */
+	struct list_head		list;
+	/* Data itself */
+	struct eblob_ram_control	rctl;
 };
 
 /* Constructor and destructor */
@@ -55,10 +59,10 @@ struct eblob_l2hash *eblob_l2hash_init(void);
 void eblob_l2hash_destroy(struct eblob_l2hash *h);
 
 /* Public API */
-int eblob_l2hash_insert(struct eblob_l2hash *h, struct eblob_key *key, void *data, int dsize);
-int eblob_l2hash_lookup(struct eblob_l2hash *h, struct eblob_key *key, void **datap, int **dsizep);
+int eblob_l2hash_insert(struct eblob_l2hash *h, struct eblob_key *key, struct eblob_ram_control *rctl);
+int eblob_l2hash_lookup(struct eblob_l2hash *h, struct eblob_key *key, struct eblob_ram_control *rctl);
 int eblob_l2hash_remove(struct eblob_l2hash *h, struct eblob_key *key);
-int eblob_l2hash_update(struct eblob_l2hash *h, struct eblob_key *key, void **datap, int **dsizep);
-int eblob_l2hash_upsert(struct eblob_l2hash *h, struct eblob_key *key, void **datap, int **dsizep);
+int eblob_l2hash_update(struct eblob_l2hash *h, struct eblob_key *key, struct eblob_ram_control *rctl);
+int eblob_l2hash_upsert(struct eblob_l2hash *h, struct eblob_key *key, struct eblob_ram_control *rctl);
 
 #endif /* __EBLOB_L2HASH_H */
