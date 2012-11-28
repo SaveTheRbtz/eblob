@@ -244,7 +244,7 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 	collision = __eblob_l2hash_resolve_collisions(e, key);
 	if (collision == NULL)
 		return -ENOENT;
-	else if (collision == L2HASH_RESOLVE_FAILED)
+	if (collision == L2HASH_RESOLVE_FAILED)
 		return -EIO;
 
 	memcpy(rctl, &collision->rctl, sizeof(struct eblob_ram_control));
@@ -359,7 +359,7 @@ int eblob_l2hash_lookup(struct eblob_l2hash *l2h, struct eblob_key *key,
 };
 
 /**
- * eblob_l2hash_remove_nolock() - remove hash element specified by @key
+ * eblob_l2hash_remove_nolock() - remove l2hash entry specified by @key
  *
  * Returns:
  *	0:		@key removed
@@ -384,14 +384,14 @@ static int eblob_l2hash_remove_nolock(struct eblob_l2hash *l2h,
 	collision = __eblob_l2hash_resolve_collisions(e, key);
 	if (collision == NULL)
 		return -ENOENT;
-	else if (collision == L2HASH_RESOLVE_FAILED)
+	if (collision == L2HASH_RESOLVE_FAILED)
 		return -EIO;
 
 	/* Remove list entry */
 	list_del_init(&collision->list);
 	free(collision);
 
-	/* If this was the last entry in list remove tree node */
+	/* If this was the last entry in list also remove tree node */
 	if (list_empty(&e->collisions)) {
 		rb_erase(&e->node, &l2h->root);
 		free(e);
