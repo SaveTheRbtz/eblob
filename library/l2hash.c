@@ -159,6 +159,8 @@ int eblob_l2hash_destroy(struct eblob_l2hash *l2h)
 	if (l2h == NULL)
 		return -EINVAL;
 
+	/* FIXME: Recursively destroy tree and lists */
+
 	err = pthread_mutex_destroy(&l2h->root_lock);
 	free(l2h);
 
