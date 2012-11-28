@@ -196,6 +196,36 @@ static int eblob_l2hash_compare_index(struct eblob_key *key, struct eblob_ram_co
 }
 
 /**
+ * __eblob_l2hash_collision() - walks list of collisions and returns entry
+ * which on-disk index key matches @key
+ */
+static struct eblob_l2hash_collision *
+__eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
+		struct eblob_key *key, struct eblob_ram_control *rctl)
+{
+	struct eblob_l2hash_collision *collision;
+
+	assert(e != NULL);
+	assert(key != NULL);
+	assert(rctl != NULL);
+
+	list_for_each_entry(collision, &e->collisions, list) {
+		switch (eblob_l2hash_compare_index(key, &collision->rctl)) {
+		case 0:
+			/* This @rctl belongs to @key */
+			return collision;
+		case 1:
+			/* This is a collision, try next */
+			continue;
+		default:
+			/* Error happened during collision resolution */
+			return L2HASH_RESOLVE_FAILED;
+		}
+	}
+	return NULL;
+}
+
+/**
  * eblob_l2hash_resolve_collisions() - for each l2hash in collision list it
  * goes to disk and checks if it belongs to given @key
  *
@@ -208,28 +238,19 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 		struct eblob_key *key, struct eblob_ram_control *rctl)
 {
 	struct eblob_l2hash_collision *collision;
-	int err;
 
 	assert(e != NULL);
 	assert(key != NULL);
 	assert(rctl != NULL);
 
-	list_for_each_entry(collision, &e->collisions, list) {
-		err = eblob_l2hash_compare_index(key, &collision->rctl);
-		switch (err) {
-		case 0:
-			/* This @rctl belongs to @key */
-			memcpy(rctl, &collision->rctl, sizeof(struct eblob_ram_control));
-			return 0;
-		case 1:
-			/* This is a collision */
-			continue;
-		default:
-			/* Error happened during collision resolution */
-			return err;
-		}
-	}
-	return -ENOENT;
+	collision = __eblob_l2hash_resolve_collisions(e, key, rctl);
+	if (collision == NULL)
+		return -ENOENT;
+	else if (collision == L2HASH_RESOLVE_FAILED)
+		return -EIO;
+
+	memcpy(rctl, &collision->rctl, sizeof(struct eblob_ram_control));
+	return 0;
 }
 
 /**

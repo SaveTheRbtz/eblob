@@ -32,6 +32,9 @@ typedef uint64_t	eblob_l2hash_t;
 #define EBLOB_L2HASH_ADD_UPDATE		(1<<1)
 #define EBLOB_L2HASH_ADD_UPSERT		(1<<2)
 
+/* Resolving collision failed */
+#define L2HASH_RESOLVE_FAILED		(void *)-1
+
 /*
  * Tree that used for last base when EBLOB_L2HASH flag is set
  */
