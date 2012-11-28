@@ -27,6 +27,11 @@ typedef uint64_t	eblob_l2hash_t;
 #define PRIl2h		PRIu64
 #endif
 
+/* Flags for internal eblob_l2hash_add function */
+#define EBLOB_L2HASH_ADD_INSERT		(1<<0)
+#define EBLOB_L2HASH_ADD_UPDATE		(1<<1)
+#define EBLOB_L2HASH_ADD_UPSERT		(1<<2)
+
 /*
  * Tree that used for last base when EBLOB_L2HASH flag is set
  */
