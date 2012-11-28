@@ -200,14 +200,14 @@ static int eblob_l2hash_compare_index(struct eblob_key *key, struct eblob_ram_co
  * Returns L2HASH_RESOLVE_FAILED in case eblob_l2hash_compare_index() failed
  */
 static struct eblob_l2hash_collision *
-__eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e, struct eblob_key *key)
+__eblob_l2hash_resolve_collisions(struct list_head *collisions, struct eblob_key *key)
 {
 	struct eblob_l2hash_collision *collision;
 
-	assert(e != NULL);
+	assert(collisions != NULL);
 	assert(key != NULL);
 
-	list_for_each_entry(collision, &e->collisions, list) {
+	list_for_each_entry(collision, collisions, list) {
 		switch (eblob_l2hash_compare_index(key, &collision->rctl)) {
 		case 0:
 			/* This @rctl belongs to @key */
@@ -241,7 +241,7 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 	assert(key != NULL);
 	assert(rctl != NULL);
 
-	collision = __eblob_l2hash_resolve_collisions(e, key);
+	collision = __eblob_l2hash_resolve_collisions(&e->collisions, key);
 	if (collision == NULL)
 		return -ENOENT;
 	if (collision == L2HASH_RESOLVE_FAILED)
@@ -381,7 +381,7 @@ static int eblob_l2hash_remove_nolock(struct eblob_l2hash *l2h,
 		return -ENOENT;
 
 	/* Resolve collisions in list */
-	collision = __eblob_l2hash_resolve_collisions(e, key);
+	collision = __eblob_l2hash_resolve_collisions(&e->collisions, key);
 	if (collision == NULL)
 		return -ENOENT;
 	if (collision == L2HASH_RESOLVE_FAILED)
@@ -471,7 +471,7 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 	}
 
 	/* Search linked list for matching entry */
-	collision = __eblob_l2hash_resolve_collisions(e, key);
+	collision = __eblob_l2hash_resolve_collisions(&e->collisions, key);
 	if (collision == L2HASH_RESOLVE_FAILED) {
 		err = -EIO;
 		goto err;
