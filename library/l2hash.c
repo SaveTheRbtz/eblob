@@ -15,6 +15,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -118,4 +119,22 @@ static inline eblob_l2hash_t eblob_l2hash_key(struct eblob_key *key)
 {
 	assert(key != NULL);
 	return eblob_l2hash_data(key, EBLOB_ID_SIZE, 0);
+}
+
+/**
+ * eblob_l2hash_init() - initializes one l2hash tree.
+ */
+struct eblob_l2hash *eblob_l2hash_init(void)
+{
+	struct eblob_l2hash *l2h;
+
+	l2h = calloc(1, sizeof(struct eblob_l2hash));
+	if (l2h == NULL)
+		return NULL;
+
+	l2h->root = RB_ROOT;
+	if (pthread_mutex_init(&l2h->root_lock, NULL) != 0)
+		return NULL;
+
+	return l2h;
 }
