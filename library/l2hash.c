@@ -290,14 +290,14 @@ __eblob_l2hash_walk(struct eblob_l2hash *l2h, struct eblob_key *key,
 }
 
 /**
- * __eblob_l2hash_lookup_nolock() - internal function that walks @l2h->root
+ * __eblob_l2hash_lookup() - internal function that walks @l2h->root
  * tree using eblob_l2hash_key(@key) as key.
  *
  * Returns pointer to tree entry on success or NULL if node with matching @key
  * was not found.
  */
 static struct eblob_l2hash_entry *
-__eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h, struct eblob_key *key)
+__eblob_l2hash_lookup(struct eblob_l2hash *l2h, struct eblob_key *key)
 {
 	struct rb_node *n;
 
@@ -331,7 +331,7 @@ static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 	assert(rctl != NULL);
 	assert(pthread_mutex_trylock(&l2h->root_lock) == EBUSY);
 
-	if ((e = __eblob_l2hash_lookup_nolock(l2h, key)) != NULL)
+	if ((e = __eblob_l2hash_lookup(l2h, key)) != NULL)
 		return eblob_l2hash_resolve_collisions(e, key, rctl);
 
 	return -ENOENT;
@@ -378,7 +378,7 @@ static int eblob_l2hash_remove_nolock(struct eblob_l2hash *l2h,
 	assert(pthread_mutex_trylock(&l2h->root_lock) == EBUSY);
 
 	/* Find entry in tree */
-	if ((e = __eblob_l2hash_lookup_nolock(l2h, key)) == NULL)
+	if ((e = __eblob_l2hash_lookup(l2h, key)) == NULL)
 		return -ENOENT;
 
 	/* Resolve collisions in list */
