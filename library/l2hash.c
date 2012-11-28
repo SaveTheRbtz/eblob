@@ -303,7 +303,7 @@ __eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h, struct eblob_key *key)
 
 	assert(l2h != NULL);
 	assert(key != NULL);
-	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
+	assert(pthread_mutex_trylock(&l2h->root_lock) == EBUSY);
 
 	n = __eblob_l2hash_walk(l2h, key, NULL, NULL);
 	if (n == NULL)
@@ -330,7 +330,7 @@ static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 	assert(l2h != NULL);
 	assert(key != NULL);
 	assert(rctl != NULL);
-	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
+	assert(pthread_mutex_trylock(&l2h->root_lock) == EBUSY);
 
 	if ((e = __eblob_l2hash_lookup_nolock(l2h, key)) != NULL)
 		return eblob_l2hash_resolve_collisions(e, key, rctl);
@@ -375,7 +375,7 @@ static int eblob_l2hash_remove_nolock(struct eblob_l2hash *l2h,
 
 	assert(l2h != NULL);
 	assert(key != NULL);
-	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
+	assert(pthread_mutex_trylock(&l2h->root_lock) == EBUSY);
 
 	/* Find entry in tree */
 	if ((e = __eblob_l2hash_lookup_nolock(l2h, key)) == NULL)
@@ -445,7 +445,7 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 	assert(l2h != NULL);
 	assert(key != NULL);
 	assert(rctl != NULL);
-	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
+	assert(pthread_mutex_trylock(&l2h->root_lock) == EBUSY);
 
 	if (type <= EBLOB_L2HASH_TYPE_FIRST)
 		return -EINVAL;
