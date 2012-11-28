@@ -200,14 +200,12 @@ static int eblob_l2hash_compare_index(struct eblob_key *key, struct eblob_ram_co
  * which on-disk index key matches @key
  */
 static struct eblob_l2hash_collision *
-__eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
-		struct eblob_key *key, struct eblob_ram_control *rctl)
+__eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e, struct eblob_key *key)
 {
 	struct eblob_l2hash_collision *collision;
 
 	assert(e != NULL);
 	assert(key != NULL);
-	assert(rctl != NULL);
 
 	list_for_each_entry(collision, &e->collisions, list) {
 		switch (eblob_l2hash_compare_index(key, &collision->rctl)) {
@@ -243,7 +241,7 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 	assert(key != NULL);
 	assert(rctl != NULL);
 
-	collision = __eblob_l2hash_resolve_collisions(e, key, rctl);
+	collision = __eblob_l2hash_resolve_collisions(e, key);
 	if (collision == NULL)
 		return -ENOENT;
 	else if (collision == L2HASH_RESOLVE_FAILED)
