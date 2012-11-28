@@ -18,6 +18,7 @@
 #include <inttypes.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "eblob/blob.h"
@@ -158,17 +159,52 @@ int eblob_l2hash_destroy(struct eblob_l2hash *l2h)
 }
 
 /**
+ * eblob_l2hash_check_key() - goes to disk and compares @key with data in disk
+ * contol
+ */
+static int eblob_l2hash_check_key(struct eblob_key *key, struct eblob_ram_control *rctl)
+{
+	assert(key != NULL);
+	assert(rctl != NULL);
+
+	/* XXX: */
+	return 1;
+}
+
+/**
  * eblob_l2hash_resolve_collisions() - for each l2hash in collision list it
  * goes to disk and checks if it belongs to given @key
  *
  * Returns:
- *	0:	Success
- *	<0:	Error
+ *	0:		Collision resolved into @rctl
+ *	-ENOENT:	Entry not found
+ *	Other:		Error happended
  */
 static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 		struct eblob_key *key, struct eblob_ram_control *rctl)
 {
-	/* XXX: */
+	struct eblob_l2hash_collision *collision;
+	int err;
+
+	assert(e != NULL);
+	assert(key != NULL);
+	assert(rctl != NULL);
+
+	list_for_each_entry(collision, &e->collisions, list) {
+		err = eblob_l2hash_check_key(key, &collision->rctl);
+		switch (err) {
+		case 0:
+			/* This rctl belongs to @key */
+			memcpy(rctl, &collision->rctl, sizeof(struct eblob_ram_control));
+			return 0;
+		case 1:
+			/* This is a collision */
+			continue;
+		default:
+			/* Error happened during collision resolution */
+			return err;
+		}
+	}
 	return -ENOENT;
 }
 
