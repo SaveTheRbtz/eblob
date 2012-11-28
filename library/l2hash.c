@@ -305,8 +305,7 @@ __eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h, struct eblob_key *key)
 	assert(key != NULL);
 	assert(pthread_mutex_trylock(&l2h->root_lock) == EBUSY);
 
-	n = __eblob_l2hash_walk(l2h, key, NULL, NULL);
-	if (n == NULL)
+	if ((n = __eblob_l2hash_walk(l2h, key, NULL, NULL)) == NULL)
 		return NULL;
 
 	return rb_entry(n, struct eblob_l2hash_entry, node);
