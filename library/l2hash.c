@@ -508,3 +508,50 @@ err:
 	}
 	return err;
 }
+
+/**
+ * _eblob_l2hash_insert() - lock&check wrapper for __eblob_l2hash_insert()
+ */
+static int _eblob_l2hash_insert(struct eblob_l2hash *l2h,
+		struct eblob_key *key, struct eblob_ram_control *rctl, unsigned int flags)
+{
+	int err;
+
+	if (l2h == NULL || key == NULL || rctl == NULL)
+		return -EINVAL;
+
+	if ((err = pthread_mutex_lock(&l2h->root_lock)) != 0)
+		return -err;
+
+	err = __eblob_l2hash_insert(l2h, key, rctl, flags);
+
+	if (pthread_mutex_lock(&l2h->root_lock) != 0)
+		abort();
+
+	return err;
+}
+
+/**
+ * eblob_l2hash_insert() - inserts entry in cache. Fails if entry is already
+ * there.
+ */
+int eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key, struct eblob_ram_control *rctl)
+{
+	return _eblob_l2hash_insert(l2h, key, rctl, EBLOB_L2HASH_ADD_INSERT);
+}
+
+/**
+ * eblob_l2hash_update() - updates entry in cache. Fails if entry is not already here.
+ */
+int eblob_l2hash_update(struct eblob_l2hash *l2h, struct eblob_key *key, struct eblob_ram_control *rctl)
+{
+	return _eblob_l2hash_insert(l2h, key, rctl, EBLOB_L2HASH_ADD_UPDATE);
+}
+
+/**
+ * eblob_l2hash_upsert() - updates or inserts entry in cache (hence the name).
+ */
+int eblob_l2hash_upsert(struct eblob_l2hash *l2h, struct eblob_key *key, struct eblob_ram_control *rctl)
+{
+	return _eblob_l2hash_insert(l2h, key, rctl, EBLOB_L2HASH_ADD_UPSERT);
+}
