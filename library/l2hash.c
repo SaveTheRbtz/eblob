@@ -388,7 +388,7 @@ static int eblob_l2hash_remove_nolock(struct eblob_l2hash *l2h,
 		return -EIO;
 
 	/* Remove list entry */
-	list_del_init(&collision->list);
+	list_del(&collision->list);
 	free(collision);
 
 	/* If this was the last entry in list also remove tree node */
