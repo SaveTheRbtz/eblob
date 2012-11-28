@@ -57,7 +57,10 @@ struct eblob_l2hash {
  */
 struct eblob_l2hash_entry {
 	struct rb_node		node;
-	/* List of key hash collisions */
+	/*
+	 * List of key hash collisions
+	 * TODO: Can be replaced with hlist_head
+	 */
 	struct list_head	collisions;
 	/* Second hash of eblob_key */
 	eblob_l2hash_t		l2key;
@@ -67,7 +70,7 @@ struct eblob_l2hash_entry {
 struct eblob_l2hash_collision {
 	/*
 	 * Linked list of collisions
-	 * TODO: replace list with hlist
+	 * TODO: Can be replaced with single-linked list
 	 */
 	struct list_head		list;
 	/* Data itself */
