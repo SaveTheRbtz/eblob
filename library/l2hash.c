@@ -13,6 +13,9 @@
  * GNU General Public License for more details.
  */
 
+#include <sys/types.h>
+#include <sys/uio.h>
+
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -159,15 +162,34 @@ int eblob_l2hash_destroy(struct eblob_l2hash *l2h)
 }
 
 /**
- * eblob_l2hash_check_key() - goes to disk and compares @key with data in disk
- * contol
+ * eblob_l2hash_compare_index() - goes to disk and compares @key with data in disk
+ * control.
+ * Index has higher probability to be in memory so check with it.
+ *
+ * Returns:
+ *	0:	@key belongs to @rctl
+ *	1:	@key does not belong to @rctl
+ *	Other:	Error
  */
-static int eblob_l2hash_check_key(struct eblob_key *key, struct eblob_ram_control *rctl)
+static int eblob_l2hash_compare_index(struct eblob_key *key, struct eblob_ram_control *rctl)
 {
+	struct eblob_disk_control dc;
+	ssize_t err;
+
 	assert(key != NULL);
 	assert(rctl != NULL);
+	assert(rctl->index_fd >= 0);
 
-	/* XXX: */
+	/* Read index data */
+	err = pread(rctl->index_fd, &dc, sizeof(struct eblob_disk_control), rctl->index_offset);
+	if (err != sizeof(struct eblob_disk_control)) {
+		err = (err == -1) ? -errno : -EINTR; /* TODO: handle signal case gracefully */
+		return err;
+	}
+
+	/* Compare given @key with index */
+	if (eblob_id_cmp(dc.key.id, key->id) == 0)
+		return 0;
 	return 1;
 }
 
@@ -191,7 +213,7 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 	assert(rctl != NULL);
 
 	list_for_each_entry(collision, &e->collisions, list) {
-		err = eblob_l2hash_check_key(key, &collision->rctl);
+		err = eblob_l2hash_compare_index(key, &collision->rctl);
 		switch (err) {
 		case 0:
 			/* This @rctl belongs to @key */
