@@ -213,8 +213,9 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
  * collision resolving of key for each entry in collision list.
  *
  * Returns:
- *	0:	Success
- *	<0:	Error
+ *	0:		Key resolved
+ *	-ENOENT:	Key not found
+ *	<0:		Error during resolution
  */
 static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 		struct eblob_key *key, struct eblob_ram_control *rctl)
@@ -222,7 +223,7 @@ static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 	struct eblob_l2hash_entry *e;
 	struct rb_node *n;
 	eblob_l2hash_t l2key;
-	int err;
+	int err = -ENOENT;
 
 	assert(l2h != NULL);
 	assert(key != NULL);
@@ -239,12 +240,11 @@ static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 			n = n->rb_right;
 		else {
 			err = eblob_l2hash_resolve_collisions(e, key, rctl);
-			if (err == 0)
-				return 0;
-			break;
+			goto err;
 		}
 	}
-	return -ENOENT;
+err:
+	return err;
 }
 
 /**
