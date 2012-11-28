@@ -44,9 +44,8 @@ static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t
 
 	const unsigned char *data = (const unsigned char *)key;
 
-	while(len >= 4)
-	{
-		uint32_t k = *(uint32_t*)data;
+	while (len >= 4) {
+		uint32_t k = *(uint32_t *)data;
 
 		k *= m;
 		k ^= k >> r;
@@ -59,7 +58,7 @@ static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t
 		len -= 4;
 	}
 
-	switch(len) {
+	switch (len) {
 	case 3: h ^= data[2] << 16;
 	case 2: h ^= data[1] << 8;
 	case 1: h ^= data[0];
@@ -86,8 +85,7 @@ static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t
 	const uint64_t *data = (const uint64_t *)key;
 	const uint64_t *end = data + (len/8);
 
-	while(data != end)
-	{
+	while (data != end) {
 		uint64_t k = *data++;
 
 		k *= m;
@@ -98,9 +96,9 @@ static eblob_l2hash_t eblob_l2hash_data(const void *key, int len, eblob_l2hash_t
 		h *= m;
 	}
 
-	const unsigned char *data2 = (const unsigned char*)data;
+	const unsigned char *data2 = (const unsigned char *)data;
 
-	switch(len & 7) {
+	switch (len & 7) {
 	case 7: h ^= (uint64_t)data2[6] << 48;
 	case 6: h ^= (uint64_t)data2[5] << 40;
 	case 5: h ^= (uint64_t)data2[4] << 32;
