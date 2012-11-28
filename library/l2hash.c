@@ -231,6 +231,36 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 }
 
 /**
+ * __eblob_l2hash_lookup_nolock() - internal function that wlaks tree and
+ * returns found entry.
+ */
+static struct eblob_l2hash_entry *
+__eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h, struct eblob_key *key)
+{
+	struct eblob_l2hash_entry *e = NULL;
+	struct rb_node *n;
+	eblob_l2hash_t l2key;
+
+	assert(l2h != NULL);
+	assert(key != NULL);
+	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
+
+	n = l2h->root.rb_node;
+	while (n) {
+		e = rb_entry(n, struct eblob_l2hash_entry, node);
+		l2key = eblob_l2hash_key(key);
+
+		if (l2key < e->l2key)
+			n = n->rb_left;
+		else if (l2key > e->l2key)
+			n = n->rb_right;
+		else
+			return e;
+	}
+	return NULL;
+}
+
+/**
  * eblob_l2hash_lookup_nolock() - finds matching l2hash in tree and performs
  * collision resolving of key for each entry in collision list.
  *
@@ -243,31 +273,15 @@ static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 		struct eblob_key *key, struct eblob_ram_control *rctl)
 {
 	struct eblob_l2hash_entry *e;
-	struct rb_node *n;
-	eblob_l2hash_t l2key;
-	int err = -ENOENT;
 
 	assert(l2h != NULL);
 	assert(key != NULL);
 	assert(rctl != NULL);
 	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
 
-	n = l2h->root.rb_node;
-	while (n) {
-		e = rb_entry(n, struct eblob_l2hash_entry, node);
-		l2key = eblob_l2hash_key(key);
-
-		if (l2key < e->l2key)
-			n = n->rb_left;
-		else if (l2key > e->l2key)
-			n = n->rb_right;
-		else {
-			err = eblob_l2hash_resolve_collisions(e, key, rctl);
-			goto err;
-		}
-	}
-err:
-	return err;
+	if ((e = __eblob_l2hash_lookup_nolock(l2h, key)) != NULL)
+		return eblob_l2hash_resolve_collisions(e, key, rctl);
+	return -ENOENT;
 }
 
 /**
