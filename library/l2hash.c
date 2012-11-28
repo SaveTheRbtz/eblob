@@ -156,3 +156,79 @@ int eblob_l2hash_destroy(struct eblob_l2hash *l2h)
 
 	return 0;
 }
+
+/**
+ * eblob_l2hash_resolve_collisions() - for each l2hash in collision list it
+ * goes to disk and checks if it belongs to given @key
+ *
+ * Returns:
+ *	0:	Success
+ *	<0:	Error
+ */
+static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
+		struct eblob_key *key, struct eblob_ram_control *rctl)
+{
+	/* XXX: */
+	return -ENOENT;
+}
+
+/**
+ * eblob_l2hash_lookup_nolock() - finds matching l2hash in tree and performs
+ * collision resolving of key for each entry in collision list.
+ *
+ * Returns:
+ *	0:	Success
+ *	<0:	Error
+ */
+static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
+		struct eblob_key *key, struct eblob_ram_control *rctl)
+{
+	struct eblob_l2hash_entry *e;
+	struct rb_node *n;
+	eblob_l2hash_t l2key;
+	int err;
+
+	assert(l2h != NULL);
+	assert(key != NULL);
+	assert(rctl != NULL);
+
+	n = l2h->root.rb_node;
+	while (n) {
+		e = rb_entry(n, struct eblob_l2hash_entry, node);
+		l2key = eblob_l2hash_key(key);
+
+		if (l2key < e->l2key)
+			n = n->rb_left;
+		else if (l2key > e->l2key)
+			n = n->rb_right;
+		else {
+			err = eblob_l2hash_resolve_collisions(e, key, rctl);
+			if (err == 0)
+				return 0;
+			break;
+		}
+	}
+	return -ENOENT;
+}
+
+/**
+ * eblob_l2hash_lookup() - lock&check wrapper for eblob_l2hash_lookup_nolock()
+ */
+int eblob_l2hash_lookup(struct eblob_l2hash *l2h, struct eblob_key *key,
+		struct eblob_ram_control *rctl)
+{
+	int err;
+
+	if (l2h == NULL || key == NULL || rctl == NULL)
+		return -EINVAL;
+
+	if ((err = pthread_mutex_lock(&l2h->root_lock)) != 0)
+		return -err;
+
+	err = eblob_l2hash_lookup_nolock(l2h, key, rctl);
+
+	if (pthread_mutex_lock(&l2h->root_lock) != 0)
+		abort();
+
+	return err;
+};
