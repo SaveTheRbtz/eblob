@@ -544,7 +544,8 @@ int eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key, struct 
 }
 
 /**
- * eblob_l2hash_update() - updates entry in cache. Fails if entry is not already here.
+ * eblob_l2hash_update() - updates entry in cache. Fails if entry is not
+ * already here.
  */
 int eblob_l2hash_update(struct eblob_l2hash *l2h, struct eblob_key *key, struct eblob_ram_control *rctl)
 {
