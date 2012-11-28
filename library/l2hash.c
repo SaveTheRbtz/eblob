@@ -328,3 +328,66 @@ int eblob_l2hash_lookup(struct eblob_l2hash *l2h, struct eblob_key *key,
 
 	return err;
 };
+
+/**
+ * eblob_l2hash_remove_nolock() - remove hash element specified by @key
+ *
+ * Returns:
+ *	0:		@key removed
+ *	-ENOENT:	@key not found
+ *	Other:		Error
+ */
+static int eblob_l2hash_remove_nolock(struct eblob_l2hash *l2h,
+		struct eblob_key *key)
+{
+	struct eblob_l2hash_collision *collision;
+	struct eblob_l2hash_entry *e;
+
+	assert(l2h != NULL);
+	assert(key != NULL);
+	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
+
+	/* Find entry in tree */
+	if ((e = __eblob_l2hash_lookup_nolock(l2h, key)) == NULL)
+		return -ENOENT;
+
+	/* Resolve collisions in list */
+	collision = __eblob_l2hash_resolve_collisions(e, key);
+	if (collision == NULL)
+		return -ENOENT;
+	else if (collision == L2HASH_RESOLVE_FAILED)
+		return -EIO;
+
+	/* Remove list entry */
+	list_del_init(&collision->list);
+	free(collision);
+
+	/* If this was the last entry in list remove tree node */
+	if (list_empty(&e->collisions)) {
+		rb_erase(&e->node, &l2h->root);
+		free(e);
+	}
+
+	return 0;
+}
+
+/**
+ * eblob_l2hash_remove() - lock&check wrapper for eblob_l2hash_remove_nolock()
+ */
+int eblob_l2hash_remove(struct eblob_l2hash *l2h, struct eblob_key *key)
+{
+	int err;
+
+	if (l2h == NULL || key == NULL)
+		return -EINVAL;
+
+	if ((err = pthread_mutex_lock(&l2h->root_lock)) != 0)
+		return -err;
+
+	err = eblob_l2hash_remove_nolock(l2h, key);
+
+	if (pthread_mutex_lock(&l2h->root_lock) != 0)
+		abort();
+
+	return err;
+}
