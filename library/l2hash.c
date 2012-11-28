@@ -252,35 +252,61 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 }
 
 /**
- * __eblob_l2hash_lookup_nolock() - internal function that wlaks tree and
- * returns found entry.
+ * __eblob_l2hash_walk() - internal function that walks tree getting as close
+ * to key as possible.
+ * If eblob_l2hash_key() of key is found in tree then tree node is returned
+ * otherwise function returns NULL.
+ * @parent:	pointer to pointer to parent tree node (can be NULL)
+ * @node:	pointer to pointer to pointer to last leaf (can be NULL)
+ */
+static struct rb_node *
+__eblob_l2hash_walk(struct eblob_l2hash *l2h, struct eblob_key *key,
+		struct rb_node **parent, struct rb_node ***node)
+{
+	struct eblob_l2hash_entry *e;
+	struct rb_node **n = &l2h->root.rb_node;
+	eblob_l2hash_t l2key;
+
+	while (*n) {
+		if (parent != NULL)
+			*parent = *n;
+
+		e = rb_entry(*n, struct eblob_l2hash_entry, node);
+		l2key = eblob_l2hash_key(key);
+
+		if (l2key < e->l2key)
+			n = &(*n)->rb_left;
+		else if (l2key > e->l2key)
+			n = &(*n)->rb_right;
+		else
+			return *n;
+	}
+	if (node != NULL)
+		*node = n;
+
+	return NULL;
+}
+
+/**
+ * __eblob_l2hash_lookup_nolock() - internal function that walks @l2h->root
+ * tree and returns data found by eblob_l2hash_key() of @key.
  *
  * Returns pointer to tree entry on success or NULL if entry is not found
  */
 static struct eblob_l2hash_entry *
 __eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h, struct eblob_key *key)
 {
-	struct eblob_l2hash_entry *e = NULL;
 	struct rb_node *n;
-	eblob_l2hash_t l2key;
 
 	assert(l2h != NULL);
 	assert(key != NULL);
 	assert(pthread_mutex_trylock(&l2h->root_lock) != 0);
 
-	n = l2h->root.rb_node;
-	while (n) {
-		e = rb_entry(n, struct eblob_l2hash_entry, node);
-		l2key = eblob_l2hash_key(key);
+	n = __eblob_l2hash_walk(l2h, key, NULL, NULL);
+	if (n == NULL)
+		return NULL;
 
-		if (l2key < e->l2key)
-			n = n->rb_left;
-		else if (l2key > e->l2key)
-			n = n->rb_right;
-		else
-			return e;
-	}
-	return NULL;
+	return rb_entry(n, struct eblob_l2hash_entry, node);
 }
 
 /**
