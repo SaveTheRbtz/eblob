@@ -254,10 +254,12 @@ static int eblob_l2hash_resolve_collisions(struct eblob_l2hash_entry *e,
 /**
  * __eblob_l2hash_walk() - internal function that walks tree getting as close
  * to key as possible.
- * If eblob_l2hash_key() of key is found in tree then tree node is returned
+ * If eblob_l2hash_key() of @key is found in tree then tree node is returned
  * otherwise function returns NULL.
  * @parent:	pointer to pointer to parent tree node (can be NULL)
  * @node:	pointer to pointer to pointer to last leaf (can be NULL)
+ *
+ * @parent and @node are needed for subsequent rb_link_node()
  */
 static struct rb_node *
 __eblob_l2hash_walk(struct eblob_l2hash *l2h, struct eblob_key *key,
