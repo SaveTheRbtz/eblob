@@ -313,13 +313,13 @@ __eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h, struct eblob_key *key)
 
 /**
  * eblob_l2hash_lookup_nolock() - finds matching l2hash in tree and performs
- * collision resolving of key for each entry in collision list.
+ * collision resolution of @key for each entry in collision list.
  * If match is found it's placed into structure pointed by @rctl.
  *
  * Returns:
  *	0:		Key resolved
  *	-ENOENT:	Key not found
- *	<0:		Error during resolution
+ *	<0:		Error during lookup
  */
 static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 		struct eblob_key *key, struct eblob_ram_control *rctl)
