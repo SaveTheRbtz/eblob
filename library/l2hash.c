@@ -435,6 +435,7 @@ static int eblob_l2hash_remove_nolock(struct eblob_l2hash *l2h,
 {
 	struct eblob_l2hash_collision *collision;
 	struct eblob_l2hash_entry *e;
+	int err;
 
 	assert(l2h != NULL);
 	assert(key != NULL);
@@ -444,11 +445,31 @@ static int eblob_l2hash_remove_nolock(struct eblob_l2hash *l2h,
 	if ((e = __eblob_l2hash_lookup(l2h, key)) == NULL)
 		return -ENOENT;
 
-	/* Resolve collisions in list */
-	/* collision = __eblob_l2hash_resolve_collisions(); */
+	/*
+	 * If there are no collisions check that key belongs to rctl and
+	 * remove entry from tree
+	 */
+	if (e->collision == 0) {
+		switch(err = eblob_l2hash_compare_index(key, &e->rctl)) {
+		case 0:
+			rb_erase(&e->node, &l2h->root);
+			free(e);
+			return 0;
+		case 1:
+			return -ENOENT;
+		default:
+			return err;
+		}
+	}
 
-	/* XXX: Remove collision entry */
+	/* If collision is set and entry is not present in collision tree */
+	collision = __eblob_l2hash_resolve_collisions(&l2h->collisions, key);
+	if (collision == NULL)
+		return -ENOENT;
 
+	/* Otherwise - remove entry from collision tree */
+	rb_erase(&collision->node, &l2h->collisions);
+	free(collision);
 	return 0;
 }
 
