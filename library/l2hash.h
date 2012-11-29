@@ -48,8 +48,10 @@ enum eblob_l2hash_insert_types {
  * Tree that used for last base when EBLOB_L2HASH flag is set
  */
 struct eblob_l2hash {
-	struct rb_root		root;
+	/* Global hash lock */
 	pthread_mutex_t		root_lock;
+	/* Tree of l2hashes */
+	struct rb_root		root;
 	/* Tree of collisions in l2hash */
 	struct rb_root		collisions;
 };
@@ -58,11 +60,13 @@ struct eblob_l2hash {
  * List of hash entries which happen to map to the same l2hash
  */
 struct eblob_l2hash_entry {
-	struct rb_node		node;
+	struct rb_node			node;
 	/* Second hash of eblob_key */
-	eblob_l2hash_t		l2key;
+	eblob_l2hash_t			l2key;
+	/* Data itself */
+	struct eblob_ram_control	rctl;
 	/* This flag is set when collision detected in l2hash */
-	char			collision;
+	char				collision;
 };
 
 /* Entry in collision tree */
