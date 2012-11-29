@@ -50,6 +50,8 @@ enum eblob_l2hash_insert_types {
 struct eblob_l2hash {
 	struct rb_root		root;
 	pthread_mutex_t		root_lock;
+	/* Tree of collisions in l2hash */
+	struct rb_root		collisions;
 };
 
 /*
@@ -57,22 +59,17 @@ struct eblob_l2hash {
  */
 struct eblob_l2hash_entry {
 	struct rb_node		node;
-	/*
-	 * List of key hash collisions
-	 * TODO: Can be replaced with hlist_head
-	 */
-	struct list_head	collisions;
 	/* Second hash of eblob_key */
 	eblob_l2hash_t		l2key;
+	/* This flag is set when collision detected in l2hash */
+	char			collision;
 };
 
-/* One entry in collision list of eblob_l2hash_entry */
+/* Entry in collision tree */
 struct eblob_l2hash_collision {
-	/*
-	 * Linked list of collisions
-	 * TODO: Can be replaced with single-linked list
-	 */
-	struct list_head		list;
+	struct rb_node			node;
+	/* Full key */
+	struct eblob_key		key;
 	/* Data itself */
 	struct eblob_ram_control	rctl;
 };
