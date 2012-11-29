@@ -185,7 +185,7 @@ static int __eblob_l2hash_index_hdr(struct eblob_ram_control *rctl, struct eblob
 }
 
 /**
- * eblob_l2hash_compare_index() - goes to disk and compares @key with data in disk
+ * eblob_l2hash_compare_index() - goes to index and compares @key with data in disk
  * control.
  * Index has higher probability to be in memory so use if instead of data file.
  *
@@ -214,26 +214,103 @@ static int eblob_l2hash_compare_index(struct eblob_key *key, struct eblob_ram_co
 }
 
 /**
- * __eblob_l2hash_collision()
+ * __eblob_l2hash_collision_walk() - internal function that walks collision
+ * tree getting as close to key as possible.
+ * @parent:	pointer to pointer to parent tree node (can be NULL)
+ * @node:	pointer to pointer to pointer to last leaf (can be NULL)
  *
- * Returns L2HASH_RESOLVE_FAILED in case eblob_l2hash_compare_index() failed
+ * @parent and @node are needed for subsequent rb_link_node()
  */
-static struct eblob_l2hash_collision *
-__eblob_l2hash_resolve_collisions(/* XXX: */)
+static struct rb_node *
+__eblob_l2hash_collision_walk(struct rb_root *root, struct eblob_key *key,
+		struct rb_node  **parent, struct rb_node ***node)
 {
-	struct eblob_l2hash_collision *collision;
+	struct eblob_l2hash_collision *e;
+	struct rb_node **n = &root->rb_node;
+	int cmp;
 
-	/* XXX: */
+	while (*n) {
+		if (parent != NULL)
+			*parent = *n;
+
+		e = rb_entry(*n, struct eblob_l2hash_collision, node);
+		cmp = eblob_id_cmp(key->id, e->key.id);
+		if (cmp < 0)
+			n = &(*n)->rb_left;
+		else if (cmp > 0)
+			n = &(*n)->rb_right;
+		else
+			return *n;
+	}
+	if (node != NULL)
+		*node = n;
 
 	return NULL;
 }
 
 /**
- * eblob_l2hash_resolve_collisions()
+ * __eblob_l2hash_resolve_collisions() - extracts rb_entry from found node
  */
-static int eblob_l2hash_resolve_collisions(/* XXX: */)
+static struct eblob_l2hash_collision *
+__eblob_l2hash_resolve_collisions(struct rb_root *root, struct eblob_key *key)
 {
-	/* XXX: */
+	struct rb_node *n;
+	struct eblob_l2hash_collision *collision = NULL;
+
+	assert(root != NULL);
+	assert(key != NULL);
+
+	if ((n = __eblob_l2hash_collision_walk(root, key, NULL, NULL)) != NULL)
+		collision = rb_entry(n, struct eblob_l2hash_collision, node);
+	return collision;
+}
+
+/**
+ * eblob_l2hash_resolve_collisions() - resolves possible collision in l2hash by
+ * going to disk or walking collision tree.
+ *
+ * Returns:
+ *	0:		@key resolved into @rctl
+ *	-ENOENT:	@key not found
+ *	Other:		Error
+ */
+static int eblob_l2hash_resolve_collisions(struct rb_root *root,
+		struct eblob_l2hash_entry *e, struct eblob_key *key,
+		struct eblob_ram_control *rctl)
+{
+	struct eblob_l2hash_collision *collision;
+	int err;
+
+	assert(root != NULL);
+	assert(e != NULL);
+	assert(key != NULL);
+	assert(rctl != NULL);
+
+	/*
+	 * No collision detected so just check that key really belongs
+	 * to cached ram control.
+	 */
+	if (e->collision == 0) {
+		switch((err = eblob_l2hash_compare_index(key, &e->rctl))) {
+		case 0:
+			*rctl = e->rctl;
+			return 0;
+		case 1:
+			return -ENOENT;
+		default:
+			return err;
+		}
+		/* NOT REACHED */
+	}
+
+	/*
+	 * There is collision.
+	 * If there is collision then we should look in collision tree.
+	 */
+	if ((collision = __eblob_l2hash_resolve_collisions(root, key)) == NULL)
+		return -ENOENT;
+
+	*rctl = collision->rctl;
 	return 0;
 }
 
@@ -248,11 +325,11 @@ static int eblob_l2hash_resolve_collisions(/* XXX: */)
  * @parent and @node are needed for subsequent rb_link_node()
  */
 static struct rb_node *
-__eblob_l2hash_walk(struct eblob_l2hash *l2h, struct eblob_key *key,
+__eblob_l2hash_walk(struct rb_root *root, struct eblob_key *key,
 		struct rb_node **parent, struct rb_node ***node)
 {
 	struct eblob_l2hash_entry *e;
-	struct rb_node **n = &l2h->root.rb_node;
+	struct rb_node **n = &root->rb_node;
 	eblob_l2hash_t l2key;
 
 	while (*n) {
@@ -291,7 +368,7 @@ __eblob_l2hash_lookup(struct eblob_l2hash *l2h, struct eblob_key *key)
 	assert(key != NULL);
 	assert(pthread_mutex_trylock(&l2h->root_lock) == EBUSY);
 
-	if ((n = __eblob_l2hash_walk(l2h, key, NULL, NULL)) == NULL)
+	if ((n = __eblob_l2hash_walk(&l2h->root, key, NULL, NULL)) == NULL)
 		return NULL;
 
 	return rb_entry(n, struct eblob_l2hash_entry, node);
@@ -318,7 +395,7 @@ static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 	assert(pthread_mutex_trylock(&l2h->root_lock) == EBUSY);
 
 	if ((e = __eblob_l2hash_lookup(l2h, key)) != NULL)
-		return eblob_l2hash_resolve_collisions(/* XXX: */);
+		return eblob_l2hash_resolve_collisions(&l2h->collisions, e, key, rctl);
 
 	return -ENOENT;
 }
@@ -368,7 +445,7 @@ static int eblob_l2hash_remove_nolock(struct eblob_l2hash *l2h,
 		return -ENOENT;
 
 	/* Resolve collisions in list */
-	collision = __eblob_l2hash_resolve_collisions(/* */);
+	/* collision = __eblob_l2hash_resolve_collisions(); */
 
 	/* XXX: Remove collision entry */
 
@@ -427,7 +504,7 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 		return -EINVAL;
 
 	/* Search tree for matching entry */
-	n = __eblob_l2hash_walk(l2h, key, &parent, &node);
+	n = __eblob_l2hash_walk(&l2h->root, key, &parent, &node);
 	if (n == NULL) {
 		if (type == EBLOB_L2HASH_TYPE_UPDATE)
 			return -ENOENT;
@@ -444,10 +521,10 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 	}
 
 	/* XXX: Search tree of collisions for matching entry */
-	collision = __eblob_l2hash_resolve_collisions(/* XXX: */);
+	/* collision = __eblob_l2hash_resolve_collisions(); */
 
 	/* XXX: Finally insert/update/upsert ram control */
-	collision->rctl = *rctl;
+	/* collision->rctl = *rctl; */
 
 	return err;
 }
