@@ -19,6 +19,13 @@
 #ifndef __EBLOB_L2HASH_H
 #define __EBLOB_L2HASH_H
 
+/*
+ * On x86_64:
+ * With HASH32 defined sizeof(struct eblob_l2hash_entry) is 80
+ * Without HASH32 defined sizeof(struct eblob_l2hash_entry) is 88
+ *
+ * So it's addiotional 10% economy
+ */
 #ifdef HASH32
 typedef uint32_t	eblob_l2hash_t;
 #define PRIl2h		PRIu32
@@ -61,12 +68,12 @@ struct eblob_l2hash {
  */
 struct eblob_l2hash_entry {
 	struct rb_node			node;
-	/* Second hash of eblob_key */
-	eblob_l2hash_t			l2key;
 	/* Data itself */
 	struct eblob_ram_control	rctl;
 	/* This flag is set when collision detected in l2hash */
-	char				collision;
+	int				collision;
+	/* Second hash of eblob_key */
+	eblob_l2hash_t			l2key;
 };
 
 /* Entry in collision tree */
