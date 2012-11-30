@@ -227,9 +227,7 @@ static int eblob_l2hash_compare_index(struct eblob_key *key, struct eblob_ram_co
 		return err;
 
 	/* Compare given @key with index */
-	if (memcmp(dc.key.id, key->id, EBLOB_ID_SIZE) == 0)
-		return 0;
-	return 1;
+	return !!(eblob_id_cmp(dc.key.id, key->id));
 }
 
 /**
@@ -280,7 +278,6 @@ static int __eblob_l2hash_collision_insert(struct rb_root *root,
 	if (n != NULL)
 		return -EEXIST;
 
-	/* Space for two entries: old and new one */
 	collision = calloc(1, sizeof(struct eblob_l2hash_collision));
 	if (collision == NULL)
 		return -ENOMEM;
@@ -288,16 +285,15 @@ static int __eblob_l2hash_collision_insert(struct rb_root *root,
 	rb_link_node(&collision->node, parent, node);
 	rb_insert_color(&collision->node, root);
 
-	/* Save rctl to it */
 	collision->rctl = *rctl;
 	return 0;
 }
 
 /**
- * __eblob_l2hash_resolve_collisions() - extracts rb_entry from found node
+ * __eblob_l2hash_resolve_collision() - extracts rb_entry from found node
  */
 static struct eblob_l2hash_collision *
-__eblob_l2hash_resolve_collisions(struct rb_root *root, struct eblob_key *key)
+__eblob_l2hash_resolve_collision(struct rb_root *root, struct eblob_key *key)
 {
 	struct rb_node *n;
 	struct eblob_l2hash_collision *collision = NULL;
@@ -311,7 +307,7 @@ __eblob_l2hash_resolve_collisions(struct rb_root *root, struct eblob_key *key)
 }
 
 /**
- * eblob_l2hash_resolve_collisions() - resolves possible collision in l2hash by
+ * eblob_l2hash_resolve_collision() - resolves possible collision in l2hash by
  * going to disk or walking collision tree.
  *
  * Returns:
@@ -319,7 +315,7 @@ __eblob_l2hash_resolve_collisions(struct rb_root *root, struct eblob_key *key)
  *	-ENOENT:	@key not found
  *	Other:		Error
  */
-static int eblob_l2hash_resolve_collisions(struct rb_root *root,
+static int eblob_l2hash_resolve_collision(struct rb_root *root,
 		struct eblob_l2hash_entry *e, struct eblob_key *key,
 		struct eblob_ram_control *rctl)
 {
@@ -351,7 +347,7 @@ static int eblob_l2hash_resolve_collisions(struct rb_root *root,
 	/*
 	 * If there is collision then we should look in collision tree.
 	 */
-	if ((collision = __eblob_l2hash_resolve_collisions(root, key)) == NULL)
+	if ((collision = __eblob_l2hash_resolve_collision(root, key)) == NULL)
 		return -ENOENT;
 
 	*rctl = collision->rctl;
@@ -359,8 +355,9 @@ static int eblob_l2hash_resolve_collisions(struct rb_root *root,
 }
 
 /**
- * __eblob_l2hash_noncollision_walk() - internal function that walks tree getting as close
- * to key as possible.
+ * __eblob_l2hash_noncollision_walk() - internal function that walks tree
+ * getting as close to key as possible.
+ *
  * If eblob_l2hash_key() of @key is found in tree then tree node is returned
  * otherwise function returns NULL.
  * @parent:	pointer to pointer to parent tree node (can be NULL)
@@ -465,7 +462,7 @@ static int eblob_l2hash_lookup_nolock(struct eblob_l2hash *l2h,
 	assert(pthread_mutex_trylock(&l2h->root_lock) == EBUSY);
 
 	if ((e = __eblob_l2hash_lookup(l2h, key)) != NULL)
-		return eblob_l2hash_resolve_collisions(&l2h->collisions, e, key, rctl);
+		return eblob_l2hash_resolve_collision(&l2h->collisions, e, key, rctl);
 
 	return -ENOENT;
 }
@@ -533,7 +530,7 @@ static int eblob_l2hash_remove_nolock(struct eblob_l2hash *l2h,
 	}
 
 	/* If collision is set and entry is not present in collision tree */
-	collision = __eblob_l2hash_resolve_collisions(&l2h->collisions, key);
+	collision = __eblob_l2hash_resolve_collision(&l2h->collisions, key);
 	if (collision == NULL)
 		return -ENOENT;
 
@@ -566,7 +563,7 @@ int eblob_l2hash_remove(struct eblob_l2hash *l2h, struct eblob_key *key)
 
 /**
  * __eblob_l2hash_insert() - inserts @rctl entry into l2hash.
- * @type:	changes behaviour depending on existance of @key in cache.
+ * @type:	changes behaviour depending on existence of @key in cache.
  *
  * This is very complicated routine - should be modified with care.
  *
@@ -681,7 +678,7 @@ int eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key, struct 
 
 /**
  * eblob_l2hash_update() - updates entry in cache. Fails if entry is not
- * already here.
+ * already there.
  */
 int eblob_l2hash_update(struct eblob_l2hash *l2h, struct eblob_key *key, struct eblob_ram_control *rctl)
 {
