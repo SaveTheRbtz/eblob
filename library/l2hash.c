@@ -402,19 +402,17 @@ static int __eblob_l2hash_noncollision_insert(struct rb_root *root,
 	struct eblob_l2hash_entry *e;
 	struct rb_node *n, *parent, **node;
 
-	/* Create tree entry */
-	e = calloc(1, sizeof(struct eblob_l2hash_entry));
-	if (e == NULL)
-		return -ENOMEM;
-
 	n = __eblob_l2hash_noncollision_walk(root, key, &parent, &node);
 	if (n != NULL)
 		return -EEXIST;
 
+	e = calloc(1, sizeof(struct eblob_l2hash_entry));
+	if (e == NULL)
+		return -ENOMEM;
+
 	rb_link_node(&e->node, parent, node);
 	rb_insert_color(&e->node, root);
 
-	/* Save rctl to it */
 	e->rctl = *rctl;
 	return 0;
 }
