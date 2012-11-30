@@ -588,16 +588,14 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 		return -EINVAL;
 
 	/* Search tree for matching entry */
-	n = __eblob_l2hash_noncollision_walk(&l2h->root, key, &parent, &node);
-	if (n == NULL) {
+	e = __eblob_l2hash_lookup(l2h, key);
+	if (e == NULL) {
 		/* There is no entry with matching l2hash */
 		if (type == EBLOB_L2HASH_TYPE_UPDATE)
 			return -ENOENT;
 		return __eblob_l2hash_noncollision_insert(&l2h->root, key, rctl);
 	}
-
 	/* There is already entry with matching l2hash */
-	e = rb_entry(n, struct eblob_l2hash_entry, node);
 	if (e->collision == 0) {
 		struct eblob_disk_control dc;
 
