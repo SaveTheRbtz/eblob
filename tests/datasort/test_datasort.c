@@ -158,10 +158,9 @@ again:
 				warnx("read failed: %s (%s), retrying, error: %d",
 				    item->key, eblob_dump_id(item->ekey.id), -error);
 				goto again;
-			} else {
-				errx(EX_SOFTWARE, "key supposed to exist: %s (%s), flags: %s, error: %d",
-				    item->key, eblob_dump_id(item->ekey.id), item->hflags, -error);
 			}
+			errx(EX_SOFTWARE, "key supposed to exist: %s (%s), flags: %s, error: %d",
+			    item->key, eblob_dump_id(item->ekey.id), item->hflags, -error);
 		}
 
 		assert(item->size > 0);
@@ -263,9 +262,9 @@ again:
 			warnx("writing key failed: %s: retrying: %d",
 			    item->key, -error);
 			goto again;
-		} else
-			errx(EX_SOFTWARE, "writing key failed: %s: flags: %s, error: %d",
-			    item->key, item->hflags, -error);
+		}
+		errx(EX_SOFTWARE, "writing key failed: %s: flags: %s, error: %d",
+		    item->key, item->hflags, -error);
 	}
 
 	eblob_log(b->cfg.log, EBLOB_LOG_DEBUG, "synced: %s (%s)\n",
