@@ -48,9 +48,6 @@ enum eblob_l2hash_insert_types {
 	EBLOB_L2HASH_TYPE_LAST,
 };
 
-/* Resolving collision failed */
-#define L2HASH_RESOLVE_FAILED		((void *)-1)
-
 /*
  * Tree that used for last base when EBLOB_L2HASH flag is set
  */
