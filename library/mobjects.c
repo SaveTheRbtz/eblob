@@ -739,6 +739,11 @@ int eblob_insert_type(struct eblob_backend *b, struct eblob_key *key, struct ebl
 	int err, size, rc_free = 0, disk;
 	struct eblob_ram_control *rc, *rc_old;
 
+	if ((b->cfg.blob_flags & EBLOB_L2HASH) && on_disk == 0) {
+		err = eblob_l2hash_upsert(b->l2hash[ctl->type], key, ctl);
+		return err;
+	}
+
 	pthread_mutex_lock(&b->hash->root_lock);
 	err = eblob_hash_lookup_alloc_nolock(b->hash, key, (void **)&rc, (unsigned int *)&size, &disk);
 	if (!err) {
