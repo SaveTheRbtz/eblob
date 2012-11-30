@@ -622,12 +622,13 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 			return -ENOENT;
 
 		/* Move old entry to collision tree */
-		err = __eblob_l2hash_collision_insert(&l2h->collisions, &dc.key, rctl);
+		err = __eblob_l2hash_collision_insert(&l2h->collisions, &dc.key, &e->rctl);
 		if (err != 0)
 			return err;
 
 		e->collision = 1;
 		memset(&e->rctl, 0, sizeof(struct eblob_ram_control));
+		return __eblob_l2hash_collision_insert(&l2h->collisions, key, rctl);
 	}
 
 	/* Search tree of collisions for matching entry */
