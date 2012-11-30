@@ -590,7 +590,7 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 	/* Search tree for matching entry */
 	e = __eblob_l2hash_lookup(l2h, key);
 	if (e == NULL) {
-		/* There is no entry with matching l2hash */
+		/* No entry with matching l2hash - inserting */
 		if (type == EBLOB_L2HASH_TYPE_UPDATE)
 			return -ENOENT;
 		return __eblob_l2hash_noncollision_insert(&l2h->root, key, rctl);
@@ -603,7 +603,7 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 		if ((err = __eblob_l2hash_index_hdr(&e->rctl, &dc)) != 0)
 			return err;
 		if (eblob_id_cmp(key->id, dc.key.id) == 0) {
-			/* This is not a collision, updating in-place */
+			/* Not a collision - updating in-place */
 			if (type == EBLOB_L2HASH_TYPE_INSERT)
 				return -EEXIST;
 			e->rctl = *rctl;
@@ -633,7 +633,7 @@ static int __eblob_l2hash_insert(struct eblob_l2hash *l2h, struct eblob_key *key
 		return __eblob_l2hash_collision_insert(&l2h->collisions, key, rctl);
 	}
 
-	/* Entry found modifying in-place  */
+	/* Entry found - modifying in-place  */
 	if (type == EBLOB_L2HASH_TYPE_INSERT)
 		return -EEXIST;
 	collision = rb_entry(n, struct eblob_l2hash_collision, node);
