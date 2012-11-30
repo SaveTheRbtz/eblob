@@ -151,7 +151,24 @@ err:
 }
 
 /**
+ * __eblob_l2hash_tree_destroy() - removes all entries from given tree and
+ * frees memory allocated by tree nodes
+ */
+static void __eblob_l2hash_tree_destroy(struct rb_root *root) {
+	struct rb_node *n, *t;
+
+	assert(root != NULL);
+
+	for (n = rb_first(root); n != NULL; n = t) {
+		t = rb_next(n);
+		rb_erase(n, root);
+		free(n);
+	}
+}
+
+/**
  * eblob_l2hash_destroy() - frees memory allocated by eblob_l2hash_init()
+ * NB! Caller must manually synchronize calls to eblob_l2hash_destroy()
  */
 int eblob_l2hash_destroy(struct eblob_l2hash *l2h)
 {
@@ -160,7 +177,9 @@ int eblob_l2hash_destroy(struct eblob_l2hash *l2h)
 	if (l2h == NULL)
 		return -EINVAL;
 
-	/* FIXME: Recursively destroy l2hash and collision trees */
+	/* Destroy trees */
+	__eblob_l2hash_tree_destroy(&l2h->root);
+	__eblob_l2hash_tree_destroy(&l2h->collisions);
 
 	err = pthread_mutex_destroy(&l2h->root_lock);
 	free(l2h);
