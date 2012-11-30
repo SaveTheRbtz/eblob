@@ -869,12 +869,18 @@ static int eblob_lookup_exact_type(struct eblob_ram_control *rc, int size, struc
 
 int eblob_lookup_type(struct eblob_backend *b, struct eblob_key *key, struct eblob_ram_control *res, int *diskp)
 {
-	int err, size, disk = 0;
+	int err = 1, size, disk = 0;
 	struct eblob_ram_control *rc = NULL;
 
-	err = eblob_hash_lookup_alloc(b->hash, key, (void **)&rc, (unsigned int *)&size, &disk);
-	if (!err) {
-		err = eblob_lookup_exact_type(rc, size, res);
+	/* If l2hash is enabled - look in it first */
+	if (b->cfg.blob_flags & EBLOB_L2HASH)
+		err = eblob_l2hash_lookup(b->l2hash[res->type], key, res);
+
+	if (err) {
+		err = eblob_hash_lookup_alloc(b->hash, key, (void **)&rc, (unsigned int *)&size, &disk);
+		if (!err) {
+			err = eblob_lookup_exact_type(rc, size, res);
+		}
 	}
 
 	if (err) {
