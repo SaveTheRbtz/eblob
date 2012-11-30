@@ -343,6 +343,7 @@ main(int argc, char **argv)
 	bcfg.records_in_blob = cfg.blob_records;
 	bcfg.sync = cfg.blob_sync;
 	bcfg.file = blob_path;
+	bcfg.blob_flags = cfg.blob_flags;
 	cfg.b = eblob_init(&bcfg);
 	if (cfg.b == NULL)
 		errx(EX_OSERR, "eblob_init");
