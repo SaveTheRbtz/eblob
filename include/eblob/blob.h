@@ -287,13 +287,22 @@ struct eblob_config {
 	int			pad[12];
 };
 
+/*
+ * This is in-memory cache.
+ * It should be kept as compact as possible.
+ * TODO: we can set bctl always and remove index, type, data_fd and index_fd
+ * saving up to 16 bytes (inc. alignment)
+ */
 struct eblob_ram_control {
 	int			data_fd, index_fd;
 	uint64_t		data_offset, index_offset;
 	uint64_t		size;
 
 	short			index, type;
-	/* Pointer to bctl - it's set to non-NULL if binlog is enabled for this fd */
+	/*
+	 * Pointer to bctl - it's set to non-NULL if binlog is enabled for this
+	 * base
+	 */
 	struct eblob_base_ctl	*bctl;
 };
 

@@ -65,6 +65,7 @@ struct eblob_l2hash {
 
 /*
  * List of hash entries which happen to map to the same l2hash
+ * TODO: for additional savings collision bit may be moved to last bit of hash.
  */
 struct eblob_l2hash_entry {
 	struct rb_node			node;
