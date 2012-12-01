@@ -246,6 +246,9 @@ __eblob_l2hash_collision_walk(struct rb_root *root, struct eblob_key *key,
 	struct rb_node **n = &root->rb_node;
 	int cmp;
 
+	if (parent != NULL)
+		*parent = NULL;
+
 	while (*n) {
 		if (parent != NULL)
 			*parent = *n;
@@ -372,6 +375,9 @@ __eblob_l2hash_noncollision_walk(struct rb_root *root, struct eblob_key *key,
 	struct eblob_l2hash_entry *e;
 	struct rb_node **n = &root->rb_node;
 	eblob_l2hash_t l2key;
+
+	if (parent != NULL)
+		*parent = NULL;
 
 	while (*n) {
 		if (parent != NULL)
