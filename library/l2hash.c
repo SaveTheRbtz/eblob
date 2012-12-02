@@ -13,6 +13,13 @@
  * GNU General Public License for more details.
  */
 
+/*
+ * This is second level-hashing for in-memory cache.
+ *
+ * It aims to reduce memory consumption of eblob by storing only "small"
+ * 64/32bit hash instead of huge 512 bit.
+ */
+
 #include "features.h"
 
 #include <sys/types.h>
