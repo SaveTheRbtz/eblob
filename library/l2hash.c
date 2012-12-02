@@ -284,11 +284,11 @@ static int __eblob_l2hash_collision_insert(struct rb_root *root,
 	collision = calloc(1, sizeof(struct eblob_l2hash_collision));
 	if (collision == NULL)
 		return -ENOMEM;
+	collision->key = *key;
+	collision->rctl = *rctl;
 
 	rb_link_node(&collision->node, parent, node);
 	rb_insert_color(&collision->node, root);
-
-	collision->rctl = *rctl;
 	return 0;
 }
 
