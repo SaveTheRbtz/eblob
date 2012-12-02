@@ -415,11 +415,11 @@ static int __eblob_l2hash_noncollision_insert(struct rb_root *root,
 	e = calloc(1, sizeof(struct eblob_l2hash_entry));
 	if (e == NULL)
 		return -ENOMEM;
+	e->l2key = eblob_l2hash_key(key);
+	e->rctl = *rctl;
 
 	rb_link_node(&e->node, parent, node);
 	rb_insert_color(&e->node, root);
-
-	e->rctl = *rctl;
 	return 0;
 }
 
