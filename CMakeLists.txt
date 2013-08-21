@@ -96,6 +96,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wmissing-declarations -Wredundant-decls")
 add_definitions(
+    -g3
     -Wall
     -Wextra
     -Wstrict-aliasing=2

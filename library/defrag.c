@@ -216,6 +216,84 @@ err_out_exit:
 }
 
 /**
+ * eblob_sort_index() - sorts indexes of closed blobs if not already.
+ */
+static int eblob_sort_index(struct eblob_backend *b)
+{
+	struct eblob_base_ctl *bctl;
+	int err;
+
+	EBLOB_WARNX(b->cfg.log, EBLOB_LOG_INFO, "indexsort: started");
+
+	list_for_each_entry(bctl, &b->bases, base_entry) {
+		/* do not process last entry, it can be used for writing */
+		if (list_is_last(&bctl->base_entry, &b->bases))
+			break;
+
+		/* Skip already sorted indexes */
+		if (bctl->sort.fd != -1)
+			continue;
+
+		/* Sort index */
+		eblob_base_wait_locked(bctl);
+
+		EBLOB_WARNX(b->cfg.log, EBLOB_LOG_NOTICE,
+				"indexsort: sorting index of: %s", bctl->name);
+
+		err = eblob_generate_sorted_index(b, bctl);
+		if (err != 0) {
+			EBLOB_WARNC(b->cfg.log, -err, EBLOB_LOG_ERROR,
+					"indexsort: eblob_generate_sorted_index: FAILED");
+			continue;
+		}
+
+		/* Map bctl into memory */
+		err = eblob_base_setup_data(bctl, 1);
+		if (err != 0) {
+			EBLOB_WARNC(b->cfg.log, -err, EBLOB_LOG_ERROR,
+					"indexsort: eblob_base_setup_data: FAILED");
+			/* XXX: Remove sorted index */
+			continue;
+		}
+
+		/* Fill index blocks and bloom */
+		pthread_rwlock_wrlock(&bctl->index_blocks_lock);
+		err = eblob_index_blocks_fill(bctl);
+		if (err != 0) {
+			EBLOB_WARNC(b->cfg.log, -err, EBLOB_LOG_ERROR,
+					"indexsort: eblob_index_blocks_fill: FAILED");
+			/* XXX: Remove sorted index */
+			pthread_rwlock_unlock(&bctl->index_blocks_lock);
+			continue;
+		}
+
+		/* Cleanup cache entries */
+		struct eblob_disk_control * const index = bctl->sort.data;
+		const uint64_t index_size = bctl->sort.size / sizeof(struct eblob_disk_control);
+		for (uint64_t offset = 0; offset < index_size; ++offset) {
+			/* Shortcut */
+			struct eblob_disk_control * const dc = &index[offset];
+			/* This entry was already removed */
+			if (dc->flags & BLOB_DISK_CTL_REMOVE)
+				continue;
+			/* Remove entry from either hash or l2hash */
+			if ((err = eblob_cache_remove_nolock(b, &dc->key)) != 0)
+				EBLOB_WARNC(b->cfg.log, EBLOB_LOG_DEBUG, -err,
+						"eblob_hash_remove_nolock: %s, offset: %" PRIu64,
+						eblob_dump_id(dc->key.id), offset);
+		}
+		EBLOB_WARNX(b->cfg.log, EBLOB_LOG_NOTICE,
+				"indexsort: sorted index of: %s", bctl->name);
+		pthread_rwlock_unlock(&bctl->index_blocks_lock);
+		pthread_mutex_unlock(&bctl->lock);
+	}
+
+	EBLOB_WARNX(b->cfg.log, EBLOB_LOG_INFO, "indexsort: finished");
+	return 0;
+}
+
+
+/**
  * eblob_defrag() - defragmentation thread that runs defrag by timer
  */
 void *eblob_defrag(void *data)
@@ -234,6 +312,7 @@ void *eblob_defrag(void *data)
 
 	while (!b->need_exit) {
 		if ((sleep_time-- != 0) && (b->want_defrag == 0)) {
+			eblob_sort_index(b);
 			sleep(1);
 			continue;
 		}
