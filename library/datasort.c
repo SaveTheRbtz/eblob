@@ -833,6 +833,7 @@ static void datasort_destroy(struct datasort_cfg *dcfg)
 {
 	pthread_mutex_destroy(&dcfg->lock);
 	free(dcfg->dir);
+	free(dcfg->cleanup_fds);
 };
 
 /**
@@ -1126,15 +1127,17 @@ static int datasort_swap_disk(struct datasort_cfg *dcfg)
 	snprintf(tmp_index_path, PATH_MAX, "%s.tmp", sorted_index_path);
 
 	/*
-	 * Close and invalidate base's fds
-	 * This preforms minimal cleanups while holding locks.
-	 * TODO: Move to separate function i.e. __eblob_base_ctl_cleanup
+	 * Schedule fds for closing and invalidate them
 	 */
 	for (n = 0; n < dcfg->bctl_cnt; ++n) {
-		close(dcfg->bctl[n]->sort.fd);
-		close(dcfg->bctl[n]->data_fd);
-		close(dcfg->bctl[n]->index_fd);
+		int i = 0;
+
+		dcfg->cleanup_fds[EBLOB_DATASORT_CLEANUP_FD_NR * n + i++] = dcfg->bctl[n]->sort.fd;
+		dcfg->cleanup_fds[EBLOB_DATASORT_CLEANUP_FD_NR * n + i++] = dcfg->bctl[n]->data_fd;
+		dcfg->cleanup_fds[EBLOB_DATASORT_CLEANUP_FD_NR * n + i++] = dcfg->bctl[n]->index_fd;
 		dcfg->bctl[n]->sort.fd = dcfg->bctl[n]->data_fd = dcfg->bctl[n]->index_fd = -1;
+
+		assert(i == EBLOB_DATASORT_CLEANUP_FD_NR);
 	}
 
 	/*
@@ -1177,11 +1180,9 @@ static int datasort_swap_disk(struct datasort_cfg *dcfg)
 
 	EBLOB_WARNX(dcfg->log, EBLOB_LOG_NOTICE,
 			"swapped: data: %s -> %s, "
-			"data_fd: %d -> %d, index_fd: %d -> %d",
+			"data_fd: %d, index_fd: %d",
 			dcfg->result->path, data_path,
-			sorted_bctl->data_fd, unsorted_bctl->data_fd,
-			eblob_get_index_fd(sorted_bctl),
-			eblob_get_index_fd(unsorted_bctl));
+			sorted_bctl->data_fd, eblob_get_index_fd(sorted_bctl));
 	return 0;
 
 err:
@@ -1193,7 +1194,7 @@ err:
  */
 static void datasort_cleanup(struct datasort_cfg *dcfg)
 {
-	int err, n;
+	int err, i, n;
 
 	assert(dcfg != NULL);
 
@@ -1211,6 +1212,22 @@ static void datasort_cleanup(struct datasort_cfg *dcfg)
 		 */
 		if (dcfg->sorted_bctl->index != dcfg->bctl[n]->index)
 			eblob_base_remove(dcfg->bctl[n]);
+
+		for (i = EBLOB_DATASORT_CLEANUP_FD_NR * n;
+				i < EBLOB_DATASORT_CLEANUP_FD_NR * (n + 1); ++i) {
+			int fd = dcfg->cleanup_fds[i];
+
+			if (fd == -1)
+				continue;
+
+			err = eblob_pagecache_hint(fd, EBLOB_FLAGS_HINT_DONTNEED);
+			if (err)
+				EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, -err,
+						"eblob_pagecache_hint: fd: %d", fd);
+			if (close(fd) == -1)
+				EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, errno,
+						"close: fd: %d", fd);
+		}
 
 		/*
 		 * Cleanup unsorted base
@@ -1286,6 +1303,14 @@ int eblob_generate_sorted_data(struct datasort_cfg *dcfg)
 	INIT_LIST_HEAD(&dcfg->unsorted_chunks);
 	INIT_LIST_HEAD(&dcfg->sorted_chunks);
 
+	/* Allocate CLEANUP_FD_NR fds per bctl */
+	dcfg->cleanup_fds = calloc(dcfg->bctl_cnt,
+			EBLOB_DATASORT_CLEANUP_FD_NR * sizeof(int));
+	if (dcfg->cleanup_fds == NULL) {
+		err = -ENOMEM;
+		goto err_mutex;
+	}
+
 	/* Soon we'll be using it */
 	for (n = 0; n < dcfg->bctl_cnt; ++n) {
 		err = eblob_pagecache_hint(dcfg->bctl[n]->data_fd, EBLOB_FLAGS_HINT_WILLNEED);
@@ -1306,7 +1331,11 @@ int eblob_generate_sorted_data(struct datasort_cfg *dcfg)
 			pthread_mutex_unlock(&dcfg->b->lock);
 			EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, -err, "eblob_binlog_start: %s",
 					bctl->name);
-			goto err_mutex;
+			/*
+			 * We need to stop all binlogs because some of them may
+			 * be started
+			 */
+			goto err_stop;
 		}
 	}
 	pthread_mutex_unlock(&dcfg->b->lock);
@@ -1361,6 +1390,8 @@ int eblob_generate_sorted_data(struct datasort_cfg *dcfg)
 	for (n = 0; n < dcfg->bctl_cnt; ++n)
 		eblob_base_wait_locked(dcfg->bctl[n]);
 
+	EBLOB_WARNX(dcfg->log, EBLOB_LOG_INFO, "datasort: locked");
+
 	/* Apply binlog */
 	err = datasort_binlog_apply(dcfg);
 	if (err != 0) {
@@ -1399,6 +1430,8 @@ int eblob_generate_sorted_data(struct datasort_cfg *dcfg)
 	for (n = 0; n < dcfg->bctl_cnt; ++n)
 		pthread_mutex_unlock(&dcfg->bctl[n]->lock);
 	pthread_mutex_unlock(&dcfg->b->lock);
+
+	EBLOB_WARNX(dcfg->log, EBLOB_LOG_INFO, "datasort: unlocked");
 
 	/* Preform cleanups */
 	datasort_cleanup(dcfg);

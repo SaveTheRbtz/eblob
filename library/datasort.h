@@ -32,6 +32,8 @@
 /* Suffix for flag-file that is created after data is sorted */
 #define EBLOB_DATASORT_SORTED_MARK_SUFFIX	".data_is_sorted"
 
+#define EBLOB_DATASORT_CLEANUP_FD_NR		3
+
 /*
  * One chunk of blob.
  */
@@ -88,6 +90,8 @@ struct datasort_cfg {
 	struct eblob_base_ctl		**bctl;
 	/* Number of pointers in **bctl */
 	int				bctl_cnt;
+	/* fds to close / purege from cache after datasort */
+	int				*cleanup_fds;
 	/* Pointer to sorted bctl */
 	struct eblob_base_ctl		*sorted_bctl;
 };

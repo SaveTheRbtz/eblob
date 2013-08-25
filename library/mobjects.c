@@ -113,8 +113,10 @@ int _eblob_base_ctl_cleanup(struct eblob_base_ctl *ctl)
 
 	if (ctl->sort.fd >= 0)
 		close(ctl->sort.fd);
-	close(ctl->data_fd);
-	close(ctl->index_fd);
+	if (ctl->data_fd >= 0)
+		close(ctl->data_fd);
+	if (ctl->index_fd >= 0)
+		close(ctl->index_fd);
 
 	ctl->sort.fd = ctl->data_fd = ctl->index_fd = -1;
 
