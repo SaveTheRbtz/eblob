@@ -1126,13 +1126,16 @@ static int datasort_swap_disk(struct datasort_cfg *dcfg)
 	snprintf(tmp_index_path, PATH_MAX, "%s.tmp", sorted_index_path);
 
 	/*
-	 * Remove old base.
-	 *
-	 * XXX: Removal of files on some file systems is rather heavyweight
-	 * operation - move it out of the lock.
+	 * Close and invalidate base's fds
+	 * This preforms minimal cleanups while holding locks.
+	 * TODO: Move to separate function i.e. __eblob_base_ctl_cleanup
 	 */
-	for (n = 0; n < dcfg->bctl_cnt; ++n)
-		eblob_base_remove(dcfg->bctl[n]);
+	for (n = 0; n < dcfg->bctl_cnt; ++n) {
+		close(dcfg->bctl[n]->sort.fd);
+		close(dcfg->bctl[n]->data_fd);
+		close(dcfg->bctl[n]->index_fd);
+		dcfg->bctl[n]->sort.fd = dcfg->bctl[n]->data_fd = dcfg->bctl[n]->index_fd = -1;
+	}
 
 	/*
 	 * No way back from here!
@@ -1157,6 +1160,9 @@ static int datasort_swap_disk(struct datasort_cfg *dcfg)
 		EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, errno, "rename: %s -> %s",
 				tmp_index_path, index_path);
 
+	/* Unlink unsorted index */
+	if (unlink(index_path) == -1)
+		EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, errno, "unlink: %s", index_path);
 	/* Hardlink sorted index to unsorted one */
 	if (link(sorted_index_path, index_path) == -1)
 		EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, errno, "link: %s -> %s",
@@ -1191,6 +1197,8 @@ static void datasort_cleanup(struct datasort_cfg *dcfg)
 
 	assert(dcfg != NULL);
 
+	EBLOB_WARNX(dcfg->log, EBLOB_LOG_NOTICE, "datasort: cleanup: started");
+
 	/* Remove unsorted base(s) from memory and disk */
 	for (n = 0; n < dcfg->bctl_cnt; ++n) {
 		struct eblob_base_ctl * const bctl = dcfg->bctl[n];
@@ -1198,14 +1206,11 @@ static void datasort_cleanup(struct datasort_cfg *dcfg)
 		/* Sanity */
 		assert(bctl != NULL);
 
-		err = eblob_pagecache_hint(bctl->data_fd, EBLOB_FLAGS_HINT_DONTNEED);
-		if (err)
-			EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, -err,
-					"eblob_pagecache_hint: data: %d", bctl->data_fd);
-		err = eblob_pagecache_hint(bctl->index_fd, EBLOB_FLAGS_HINT_DONTNEED);
-		if (err)
-			EBLOB_WARNC(dcfg->log, EBLOB_LOG_ERROR, -err,
-					"eblob_pagecache_hint: index: %d", bctl->index_fd);
+		/*
+		 * Remove old base files if they are not already removed
+		 */
+		if (dcfg->sorted_bctl->index != dcfg->bctl[n]->index)
+			eblob_base_remove(dcfg->bctl[n]);
 
 		/*
 		 * Cleanup unsorted base
@@ -1225,6 +1230,8 @@ static void datasort_cleanup(struct datasort_cfg *dcfg)
 	/* Free resulting chunk and dcfg */
 	_datasort_destroy_chunk(dcfg->result);
 	datasort_destroy(dcfg);
+
+	EBLOB_WARNX(dcfg->log, EBLOB_LOG_NOTICE, "datasort: cleanup: finished");
 }
 
 /*
@@ -1385,12 +1392,6 @@ int eblob_generate_sorted_data(struct datasort_cfg *dcfg)
 					dcfg->bctl[n]->name);
 	}
 
-	/*
-	 * Preform cleanups
-	 * TODO: Move the out of the lock.
-	 */
-	datasort_cleanup(dcfg);
-
 	/* Mark base as sorted */
 	dcfg->sorted_bctl->sorted = 1;
 
@@ -1398,6 +1399,9 @@ int eblob_generate_sorted_data(struct datasort_cfg *dcfg)
 	for (n = 0; n < dcfg->bctl_cnt; ++n)
 		pthread_mutex_unlock(&dcfg->bctl[n]->lock);
 	pthread_mutex_unlock(&dcfg->b->lock);
+
+	/* Preform cleanups */
+	datasort_cleanup(dcfg);
 
 	eblob_log(dcfg->log, EBLOB_LOG_INFO, "blob: datasort: success\n");
 	return 0;
