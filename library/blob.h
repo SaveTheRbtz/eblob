@@ -108,10 +108,8 @@ void eblob_data_unmap(struct eblob_map_fd *map);
 struct eblob_index_block {
 	/* FIXME: Removing rb_node will decrease footprint by 15% on x86_64 */
 	struct rb_node		node;
-
 	struct eblob_key	start_key;
 	struct eblob_key	end_key;
-
 	uint64_t		offset;
 };
 

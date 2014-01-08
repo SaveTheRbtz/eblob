@@ -203,7 +203,7 @@ struct eblob_disk_control {
 
 	/* This structure position in the blob file */
 	uint64_t		position;
-} __attribute__ ((packed));
+} __attribute__ ((packed, aligned(8)));
 
 static inline void eblob_convert_disk_control(struct eblob_disk_control *ctl)
 {
@@ -502,26 +502,24 @@ int eblob_read_hashed(struct eblob_backend *b, const void *key, const uint64_t k
  * structures.
  */
 struct eblob_write_control {
-	uint64_t			size;
-	uint64_t			offset;
-	uint64_t			flags;
-
-	int				index;
-	int				data_fd, index_fd;
-
-	uint64_t			data_offset;
-
-	uint64_t			ctl_data_offset, ctl_index_offset;
-	uint64_t			total_size, total_data_size;
-
-	int				on_disk;
 	/*
 	 * Pointer to base control
 	 * This is only used by binlog code to handle data-sort index/data
 	 * swaps
 	 */
 	struct eblob_base_ctl		*bctl;
-};
+
+	uint64_t			size;
+	uint64_t			offset;
+	uint64_t			flags;
+	uint64_t			data_offset;
+	uint64_t			ctl_data_offset, ctl_index_offset;
+	uint64_t			total_size, total_data_size;
+
+	int				on_disk;
+	int				index;
+	int				data_fd, index_fd;
+} __attribute__ ((packed, aligned(8)));
 
 int eblob_write_prepare(struct eblob_backend *b, struct eblob_key *key,
 		uint64_t size, uint64_t flags);

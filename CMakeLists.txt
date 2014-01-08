@@ -55,6 +55,7 @@ if (WITH_ASAN)
     add_definitions(
         -fno-omit-frame-pointer
         -fsanitize=address
+        -fsanitize-undefined-trap-on-error
     )
     set(SANITIZER_LIBRARY "-lasan")
 endif (WITH_ASAN)

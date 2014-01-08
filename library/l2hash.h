@@ -71,10 +71,10 @@ struct eblob_l2hash_entry {
 	struct rb_node			node;
 	/* Data itself */
 	struct eblob_ram_control	rctl;
-	/* This flag is set when collision detected in l2hash */
-	int				collision;
 	/* Second hash of eblob_key */
 	eblob_l2hash_t			l2key;
+	/* This flag is set when collision detected in l2hash */
+	char				collision;
 };
 
 /* Entry in collision tree */
